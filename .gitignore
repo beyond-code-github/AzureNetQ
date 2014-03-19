@@ -21,8 +21,6 @@ TestResult.xml
 
 # Ignore NuGet package files.
 *.nupkg
-Package/EasyNetQ/lib
-Package/EasyNetQ.Management.Client/lib
 
 *.userprefs
 test-results

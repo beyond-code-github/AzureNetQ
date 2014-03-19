@@ -1,12 +1,12 @@
-![EasyNetQ Logo](https://raw.github.com/wiki/mikehadlow/EasyNetQ/images/logo_design_150.png)
+![AzureNetQ Logo](https://raw.github.com/wiki/mikehadlow/AzureNetQ/images/logo_design_150.png)
 
 A Nice .NET API for RabbitMQ
 
 Development is sponsored by travel industry experts [15below](http://15below.com/)
 
 * **[Homepage](http://easynetq.com)**
-* **[Documentation](https://github.com/mikehadlow/EasyNetQ/wiki/Introduction)**
-* **[NuGet](http://nuget.org/List/Packages/EasyNetQ)**
+* **[Documentation](https://github.com/mikehadlow/AzureNetQ/wiki/Introduction)**
+* **[NuGet](http://nuget.org/List/Packages/AzureNetQ)**
 * **[Discussion Group](https://groups.google.com/group/easynetq)**
 
 Goals:
@@ -39,23 +39,23 @@ RPC server...
 
 ## Management API
 
-EasyNetQ also has a client-side library for the RabbitMQ Management HTTP API. This lets you control all aspects for your
+AzureNetQ also has a client-side library for the RabbitMQ Management HTTP API. This lets you control all aspects for your
 RabbitMQ broker from .NET code, including creating virtual hosts and users; setting permissions; monitoring queues, 
 connections and channels; and setting up exchanges, queues and bindings. 
 
-See the **[documentation](https://github.com/mikehadlow/EasyNetQ/wiki/Management-API-Introduction)**.
+See the **[documentation](https://github.com/mikehadlow/AzureNetQ/wiki/Management-API-Introduction)**.
 
 The annoucement blog post is [here](http://mikehadlow.blogspot.co.uk/2012/11/a-c-net-client-proxy-for-rabbitmq.html)
 
-## Some blog posts about EasyNetQ ...
+## Some blog posts about AzureNetQ ...
 
-http://mikehadlow.blogspot.co.uk/search/label/EasyNetQ
+http://mikehadlow.blogspot.co.uk/search/label/AzureNetQ
 
 ## Getting started
 
-Just open EasyNetQ.sln in VisualStudio 2010 and build.
+Just open AzureNetQ.sln in VisualStudio 2010 and build.
 
-All the required dependencies for the solution file to build the software are included. To run the explicit tests that send messages you will have to be running the EasyNetQ.Tests.SimpleService application and have a working local RabbitMQ server (see http://www.rabbitmq.com/ for more details).
+All the required dependencies for the solution file to build the software are included. To run the explicit tests that send messages you will have to be running the AzureNetQ.Tests.SimpleService application and have a working local RabbitMQ server (see http://www.rabbitmq.com/ for more details).
 
 ## Mono specific
 
