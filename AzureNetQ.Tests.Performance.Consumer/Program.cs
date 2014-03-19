@@ -9,27 +9,29 @@ namespace AzureNetQ.Tests.Performance.Consumer
         {
             var logger = new NoDebugLogger();
 
-            var bus = RabbitHutch.CreateBus("host=localhost;product=consumer", 
-                x => x.Register<IAzureNetQLogger>(_ => logger));
+            throw new NotImplementedException();
 
-            int messageCount = 0;
-            var timer = new Timer(state =>
-            {
-                Console.Out.WriteLine("messages per second = {0}", messageCount);
-                Interlocked.Exchange(ref messageCount, 0);
-            }, null, 1000, 1000);
+            //var bus = RabbitHutch.CreateBus("host=localhost;product=consumer", 
+            //    x => x.Register<IAzureNetQLogger>(_ => logger));
 
-            bus.Subscribe<TestPerformanceMessage>("consumer", message => Interlocked.Increment(ref messageCount));
+            //int messageCount = 0;
+            //var timer = new Timer(state =>
+            //{
+            //    Console.Out.WriteLine("messages per second = {0}", messageCount);
+            //    Interlocked.Exchange(ref messageCount, 0);
+            //}, null, 1000, 1000);
 
-            Console.CancelKeyPress += (source, cancelKeyPressArgs) =>
-            {
-                Console.Out.WriteLine("Shutting down");
-                bus.Dispose();
-                timer.Dispose();
-                Console.WriteLine("Shut down complete");
-            };
+            //bus.Subscribe<TestPerformanceMessage>("consumer", message => Interlocked.Increment(ref messageCount));
 
-            Thread.Sleep(Timeout.Infinite);
+            //Console.CancelKeyPress += (source, cancelKeyPressArgs) =>
+            //{
+            //    Console.Out.WriteLine("Shutting down");
+            //    bus.Dispose();
+            //    timer.Dispose();
+            //    Console.WriteLine("Shut down complete");
+            //};
+
+            //Thread.Sleep(Timeout.Infinite);
         }
     }
 

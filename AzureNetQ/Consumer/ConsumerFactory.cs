@@ -1,44 +1,26 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using AzureNetQ.Events;
 using AzureNetQ.Topology;
 
 namespace AzureNetQ.Consumer
 {
     public class ConsumerFactory : IConsumerFactory
     {
-        private readonly IInternalConsumerFactory internalConsumerFactory;
-        private readonly IEventBus eventBus;
-
         private readonly ConcurrentDictionary<IConsumer, object> consumers = new ConcurrentDictionary<IConsumer, object>();
 
-        public ConsumerFactory(IInternalConsumerFactory internalConsumerFactory, IEventBus eventBus)
+        public ConsumerFactory()
         {
-            Preconditions.CheckNotNull(internalConsumerFactory, "internalConsumerFactory");
-
-            this.internalConsumerFactory = internalConsumerFactory;
-            this.eventBus = eventBus;
-
-            eventBus.Subscribe<StoppedConsumingEvent>(stoppedConsumingEvent =>
-                {
-                    object value;
-                    consumers.TryRemove(stoppedConsumingEvent.Consumer, out value);
-                });
         }
 
         public IConsumer CreateConsumer(
             IQueue queue, 
-            Func<byte[], MessageProperties, MessageReceivedInfo, Task> onMessage, 
-            IPersistentConnection connection, 
             IConsumerConfiguration configuration
             )
         {
             Preconditions.CheckNotNull(queue, "queue");
-            Preconditions.CheckNotNull(onMessage, "onMessage");
-            Preconditions.CheckNotNull(connection, "connection");
 
-            var consumer = CreateConsumerInstance(queue, onMessage, connection, configuration);
+            var consumer = CreateConsumerInstance(queue, configuration);
             consumers.TryAdd(consumer, null);
             return consumer;
         }
@@ -53,16 +35,9 @@ namespace AzureNetQ.Consumer
         /// <returns></returns>
         private IConsumer CreateConsumerInstance(
             IQueue queue, 
-            Func<byte[], MessageProperties, MessageReceivedInfo, Task> onMessage, 
-            IPersistentConnection connection,
             IConsumerConfiguration configuration)
         {
-            if (queue.IsExclusive)
-            {
-                return new TransientConsumer(queue, onMessage, connection, configuration, internalConsumerFactory, eventBus);
-            }
-
-            return new PersistentConsumer(queue, onMessage, connection, configuration, internalConsumerFactory, eventBus);
+            throw new NotImplementedException();
         }
 
         public void Dispose()
@@ -71,7 +46,6 @@ namespace AzureNetQ.Consumer
             {
                 consumer.Dispose();
             }
-            internalConsumerFactory.Dispose();
         }
     }
 }

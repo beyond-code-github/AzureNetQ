@@ -3,7 +3,7 @@
     /// <summary>
     /// Represents an AMQP queue
     /// </summary>
-    public interface IQueue : IBindable
+    public interface IQueue
     {
         /// <summary>
         /// The name of the queue

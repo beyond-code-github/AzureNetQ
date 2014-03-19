@@ -6,8 +6,9 @@ namespace AzureNetQ.Tests.SimpleRequester
 {
     class Program
     {
-        private static readonly IBus bus = RabbitHutch.CreateBus("host=localhost",
-            x => x.Register(_ => new NoDebugLogger()));
+        private static readonly IBus bus;
+        // = RabbitHutch.CreateBus("host=localhost",
+        //    x => x.Register(_ => new NoDebugLogger()));
 
         private static long count = 0;
 

@@ -22,62 +22,64 @@ namespace AzureNetQ.Tests.Performance.Producer
             Console.Out.WriteLine("publishInterval = {0}", publishInterval);
             Console.Out.WriteLine("messageSize = {0}", messageSize);
 
-            var bus = RabbitHutch.CreateBus("host=localhost;publisherConfirms=true;timeout=10;heartbeat=5;" + 
-                "product=producer",
-                x => x.Register<IAzureNetQLogger>(_ => new NoDebugLogger()));
+            throw new NotImplementedException();
+            
+            //var bus = RabbitHutch.CreateBus("host=localhost;publisherConfirms=true;timeout=10;heartbeat=5;" + 
+            //    "product=producer",
+            //    x => x.Register<IAzureNetQLogger>(_ => new NoDebugLogger()));
 
-            var messageCount = 0;
-            var messageRateTimer = new Timer(state =>
-            {
-                Console.Out.WriteLine("messages per second = {0}", messageCount);
-                Interlocked.Exchange(ref messageCount, 0);
-            }, null, 1000, 1000);
+            //var messageCount = 0;
+            //var messageRateTimer = new Timer(state =>
+            //{
+            //    Console.Out.WriteLine("messages per second = {0}", messageCount);
+            //    Interlocked.Exchange(ref messageCount, 0);
+            //}, null, 1000, 1000);
 
-            var cancelled = false;
-            var publishThread = new Thread(state =>
-            {
-                while (!cancelled)
-                {
-                    var text = new string('#', messageSize);
-                    var message = new TestPerformanceMessage { Text = text };
+            //var cancelled = false;
+            //var publishThread = new Thread(state =>
+            //{
+            //    while (!cancelled)
+            //    {
+            //        var text = new string('#', messageSize);
+            //        var message = new TestPerformanceMessage { Text = text };
 
-                    try
-                    {
-                        bus.PublishAsync(message).ContinueWith(task =>
-                            {
-                                if (task.IsCompleted)
-                                {
-                                    Interlocked.Increment(ref messageCount);
-                                }
-                                if (task.IsFaulted)
-                                {
-                                    Console.WriteLine(task.Exception);
-                                }
-                            });
-                    }
-                    catch (AzureNetQException easyNetQException)
-                    {
-                        Console.Out.WriteLine(easyNetQException.Message);
-                        Thread.Sleep(1000);
-                    }
-                }
-            });
-            publishThread.Start();
+            //        try
+            //        {
+            //            bus.PublishAsync(message).ContinueWith(task =>
+            //                {
+            //                    if (task.IsCompleted)
+            //                    {
+            //                        Interlocked.Increment(ref messageCount);
+            //                    }
+            //                    if (task.IsFaulted)
+            //                    {
+            //                        Console.WriteLine(task.Exception);
+            //                    }
+            //                });
+            //        }
+            //        catch (AzureNetQException easyNetQException)
+            //        {
+            //            Console.Out.WriteLine(easyNetQException.Message);
+            //            Thread.Sleep(1000);
+            //        }
+            //    }
+            //});
+            //publishThread.Start();
 
-            Console.Out.WriteLine("Timer running, ctrl-C to end");
+            //Console.Out.WriteLine("Timer running, ctrl-C to end");
 
-            Console.CancelKeyPress += (source, cancelKeyPressArgs) =>
-            {
-                Console.Out.WriteLine("Shutting down");
+            //Console.CancelKeyPress += (source, cancelKeyPressArgs) =>
+            //{
+            //    Console.Out.WriteLine("Shutting down");
                 
-                cancelled = true;
-				publishThread.Join();
-                messageRateTimer.Dispose();
-                bus.Dispose();
-                Console.WriteLine("Shut down complete");
-            };
+            //    cancelled = true;
+            //    publishThread.Join();
+            //    messageRateTimer.Dispose();
+            //    bus.Dispose();
+            //    Console.WriteLine("Shut down complete");
+            //};
 
-            Thread.Sleep(Timeout.Infinite);
+            //Thread.Sleep(Timeout.Infinite);
         }
     }
 

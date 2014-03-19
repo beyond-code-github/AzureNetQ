@@ -200,25 +200,5 @@ namespace AzureNetQ
         /// <param name="addHandlers">A function to add handlers</param>
         /// <returns>Consumer cancellation. Call Dispose to stop consuming</returns>
         IDisposable Receive(string queue, Action<IReceiveRegistration> addHandlers);
-
-        /// <summary>
-        /// Fires once the bus has connected to a RabbitMQ server.
-        /// </summary>
-        event Action Connected;
-
-        /// <summary>
-        /// Fires when the bus disconnects from a RabbitMQ server.
-        /// </summary>
-        event Action Disconnected;
-
-        /// <summary>
-        /// True if the bus is connected, False if it is not.
-        /// </summary>
-        bool IsConnected { get; }
-
-        /// <summary>
-        /// Return the advanced AzureNetQ advanced API.
-        /// </summary>
-        IAdvancedBus Advanced { get; }
     }
 }

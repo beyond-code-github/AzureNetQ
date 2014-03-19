@@ -10,22 +10,23 @@ namespace AzureNetQ.Tests.SimpleService
     {
         static void Main(string[] args)
         {
-            var bus = RabbitHutch.CreateBus("host=localhost",
-                x => x.Register<IAzureNetQLogger>(_ => new NoDebugLogger()));
-            bus.Respond<TestRequestMessage, TestResponseMessage>(HandleRequest);
-            bus.RespondAsync<TestAsyncRequestMessage, TestAsyncResponseMessage>(HandleAsyncRequest);
+            throw new NotImplementedException();
 
-            Console.WriteLine("Waiting to service requests");
-            Console.WriteLine("Ctrl-C to exit");
+            //var bus = RabbitHutch.CreateBus("host=localhost",
+            //    x => x.Register<IAzureNetQLogger>(_ => new NoDebugLogger()));
+            //bus.Respond<TestRequestMessage, TestResponseMessage>(HandleRequest);
+            //bus.RespondAsync<TestAsyncRequestMessage, TestAsyncResponseMessage>(HandleAsyncRequest);
 
-            Console.CancelKeyPress += (source, cancelKeyPressArgs) =>
-            {
-                bus.Dispose();
-                Console.WriteLine("Shut down complete");
-            };
+            //Console.WriteLine("Waiting to service requests");
+            //Console.WriteLine("Ctrl-C to exit");
 
-            Thread.Sleep(Timeout.Infinite);
-            
+            //Console.CancelKeyPress += (source, cancelKeyPressArgs) =>
+            //{
+            //    bus.Dispose();
+            //    Console.WriteLine("Shut down complete");
+            //};
+
+            //Thread.Sleep(Timeout.Infinite);
         }
 
         private static Task<TestAsyncResponseMessage> HandleAsyncRequest(TestAsyncRequestMessage request)

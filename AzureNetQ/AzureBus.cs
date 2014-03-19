@@ -7,15 +7,12 @@ using AzureNetQ.Topology;
 
 namespace AzureNetQ
 {
-    public class RabbitBus : IBus
+    public class AzureBus : IBus
     {
         private readonly IAzureNetQLogger logger;
         private readonly IConventions conventions;
-        private readonly IAdvancedBus advancedBus;
-        private readonly IPublishExchangeDeclareStrategy publishExchangeDeclareStrategy;
         private readonly IRpc rpc;
         private readonly ISendReceive sendReceive;
-        private readonly IConnectionConfiguration connectionConfiguration;
 
         public IAzureNetQLogger Logger
         {
@@ -27,33 +24,21 @@ namespace AzureNetQ
             get { return conventions; }
         }
 
-        public RabbitBus(
+        public AzureBus(
             IAzureNetQLogger logger,
             IConventions conventions,
-            IAdvancedBus advancedBus,
-            IPublishExchangeDeclareStrategy publishExchangeDeclareStrategy,
             IRpc rpc,
-            ISendReceive sendReceive,
-            IConnectionConfiguration connectionConfiguration)
+            ISendReceive sendReceive)
         {
             Preconditions.CheckNotNull(logger, "logger");
             Preconditions.CheckNotNull(conventions, "conventions");
-            Preconditions.CheckNotNull(advancedBus, "advancedBus");
-            Preconditions.CheckNotNull(publishExchangeDeclareStrategy, "publishExchangeDeclareStrategy");
             Preconditions.CheckNotNull(rpc, "rpc");
             Preconditions.CheckNotNull(sendReceive, "sendReceive");
-            Preconditions.CheckNotNull(connectionConfiguration, "connectionConfiguration");
 
             this.logger = logger;
             this.conventions = conventions;
-            this.advancedBus = advancedBus;
-            this.publishExchangeDeclareStrategy = publishExchangeDeclareStrategy;
             this.rpc = rpc;
             this.sendReceive = sendReceive;
-            this.connectionConfiguration = connectionConfiguration;
-
-            advancedBus.Connected += OnConnected;
-            advancedBus.Disconnected += OnDisconnected;
         }
 
         public void Publish<T>(T message) where T : class
@@ -83,12 +68,7 @@ namespace AzureNetQ
             Preconditions.CheckNotNull(message, "message");
             Preconditions.CheckNotNull(topic, "topic");
             
-            var exchange = publishExchangeDeclareStrategy.DeclareExchange(advancedBus, typeof(T), ExchangeType.Topic);
-            var easyNetQMessage = new Message<T>(message);
-
-            easyNetQMessage.Properties.DeliveryMode = (byte)(connectionConfiguration.PersistentMessages ? 2 : 1);
-
-            return advancedBus.PublishAsync(exchange, topic, false, false, easyNetQMessage);
+            throw new NotImplementedException();
         }
 
         public virtual IDisposable Subscribe<T>(string subscriptionId, Action<T> onMessage) where T : class
@@ -136,15 +116,7 @@ namespace AzureNetQ
             var queueName = conventions.QueueNamingConvention(typeof(T), subscriptionId);
             var exchangeName = conventions.ExchangeNamingConvention(typeof(T));
 
-            var queue = advancedBus.QueueDeclare(queueName, autoDelete: configuration.AutoDelete);
-            var exchange = advancedBus.ExchangeDeclare(exchangeName, ExchangeType.Topic);
-
-            foreach (var topic in configuration.Topics.AtLeastOneWithDefault("#"))
-            {
-                advancedBus.Bind(exchange, queue, topic);
-            }
-
-            return advancedBus.Consume<T>(queue, (message, messageRecievedInfo) => onMessage(message.Body), x => x.WithPriority(configuration.Priority));
+            throw new NotImplementedException();
         }
 
         public TResponse Request<TRequest, TResponse>(TRequest request)
@@ -210,34 +182,10 @@ namespace AzureNetQ
         {
             return sendReceive.Receive(queue, addHandlers);
         }
-
-        public virtual event Action Connected;
-
-        protected void OnConnected()
-        {
-            if (Connected != null) Connected();
-        }
-
-        public virtual event Action Disconnected;
-
-        protected void OnDisconnected()
-        {
-            if (Disconnected != null) Disconnected();
-        }
-
-        public virtual bool IsConnected
-        {
-            get { return advancedBus.IsConnected; }
-        }
-
-        public virtual IAdvancedBus Advanced
-        {
-            get { return advancedBus; }
-        }
-
+        
         public virtual void Dispose()
         {
-            advancedBus.Dispose();
+            throw new NotImplementedException();
         }
     }
 }

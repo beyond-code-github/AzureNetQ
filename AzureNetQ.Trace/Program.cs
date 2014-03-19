@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Threading;
-using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 
 using CommandLine;
 using CommandLine.Text;
@@ -19,8 +17,6 @@ namespace AzureNetQ.Trace
         private const string deliverRoutingKey = "deliver.#";
         private static readonly CancellationTokenSource tokenSource = 
             new CancellationTokenSource();
-        private static readonly BlockingCollection<BasicDeliverEventArgs> deliveryQueue = 
-            new BlockingCollection<BasicDeliverEventArgs>(1);
 
         private static readonly Options options = new Options();
         private static CSVFile csvFile;
@@ -86,18 +82,19 @@ namespace AzureNetQ.Trace
             int msgCount = 0;
             new Thread(() =>
                 {
-                    try
-                    {
-                        foreach (var deliverEventArgs in deliveryQueue.GetConsumingEnumerable(tokenSource.Token))
-                        {
-                            HandleDelivery(deliverEventArgs,msgCount++);
-                        }
-                    }
-                    // deliveryQueue has been disposed so do nothing
-                    catch (OperationCanceledException)
-                    {}
-                    catch (ObjectDisposedException)
-                    {}
+                    throw new NotImplementedException();
+                    //try
+                    //{
+                    //    foreach (var deliverEventArgs in deliveryQueue.GetConsumingEnumerable(tokenSource.Token))
+                    //    {
+                    //        HandleDelivery(deliverEventArgs,msgCount++);
+                    //    }
+                    //}
+                    //// deliveryQueue has been disposed so do nothing
+                    //catch (OperationCanceledException)
+                    //{}
+                    //catch (ObjectDisposedException)
+                    //{}
                 })
                 {
                     Name = "AzureNetQ.Trace - delivery."
@@ -108,103 +105,34 @@ namespace AzureNetQ.Trace
 
         static IDisposable ConnectAndSubscribe(string connectionString)
         {
-            var connectionFactory = new ConnectionFactory
-                {
-                    Uri = connectionString,
-                    ClientProperties = new Dictionary<string, object>
-                        {
-                            { "Client", "AzureNetQ.Trace" },
-                            { "Host", Environment.MachineName }
-                        },
-                    RequestedHeartbeat = 10
-                };
+            throw new NotImplementedException();
 
-            var connection = connectionFactory.CreateConnection();
-            var disposable = new Disposable{ ToBeDisposed = connection };
-            connection.ConnectionShutdown += (connection1, reason) =>
-                {
-                    if(!tokenSource.IsCancellationRequested)
-                    {
-                        Console.Out.WriteLine("\nConnection closed.\nReason {0}\nNow reconnecting", reason.ToString());
-                        disposable.ToBeDisposed = ConnectAndSubscribe(connectionString);
-                    }
-                };
+            //var connectionFactory = new ConnectionFactory
+            //    {
+            //        Uri = connectionString,
+            //        ClientProperties = new Dictionary<string, object>
+            //            {
+            //                { "Client", "AzureNetQ.Trace" },
+            //                { "Host", Environment.MachineName }
+            //            },
+            //        RequestedHeartbeat = 10
+            //    };
 
-            Subscribe(connection, traceExchange, publishRoutingKey);
-            Subscribe(connection, traceExchange, deliverRoutingKey);
+            //var connection = connectionFactory.CreateConnection();
+            //var disposable = new Disposable{ ToBeDisposed = connection };
+            //connection.ConnectionShutdown += (connection1, reason) =>
+            //    {
+            //        if(!tokenSource.IsCancellationRequested)
+            //        {
+            //            Console.Out.WriteLine("\nConnection closed.\nReason {0}\nNow reconnecting", reason.ToString());
+            //            disposable.ToBeDisposed = ConnectAndSubscribe(connectionString);
+            //        }
+            //    };
 
-            return disposable;
-        }
+            //Subscribe(connection, traceExchange, publishRoutingKey);
+            //Subscribe(connection, traceExchange, deliverRoutingKey);
 
-        static void Subscribe(IConnection connection, string exchangeName, string routingKey)
-        {
-            new Thread(() =>
-                {
-                    var channel = connection.CreateModel();
-                    var queueDeclareOk = channel.QueueDeclare();
-                    channel.QueueBind(queueDeclareOk.QueueName, exchangeName, routingKey);
-                    var subscription = new RabbitMQ.Client.MessagePatterns.Subscription(channel, queueDeclareOk.QueueName);
-
-                    try
-                    {
-                        while (!tokenSource.IsCancellationRequested && channel.IsOpen)
-                        {
-                            var deliveryArgs = subscription.Next();
-                            if (!(deliveryArgs == null || tokenSource.IsCancellationRequested))
-                            {
-                                deliveryQueue.Add(deliveryArgs, tokenSource.Token);
-                            }
-                        }
-                    }
-                    // deliveryQueue has been disposed, so do nothing
-                    catch (OperationCanceledException)
-                    {}
-                    catch (ObjectDisposedException)
-                    {}
-                    Console.Out.WriteLine("Subscription to exchange {0}, routingKey {1} closed", exchangeName, routingKey);
-                })
-                {
-                    Name = string.Format("AzureNetQ.Trace - subscription {0} {1}", exchangeName, routingKey)
-                }.Start();
-        }
-
-        static void HandleDelivery(BasicDeliverEventArgs basicDeliverEventArgs,int msgCount)
-        {
-            if (basicDeliverEventArgs == null) return;
-
-            Func<string, object> getHeader = key => basicDeliverEventArgs.BasicProperties.Headers.ContainsKey(key)
-                ? basicDeliverEventArgs.BasicProperties.Headers[key]
-                : null;
-
-            Func<byte[], string> decode = bytes => Encoding.UTF8.GetString(bytes);
-
-            if (!options.quiet)
-            {
-                //Standard output
-                Console.Out.WriteLine("");
-                Console.Out.WriteLine("RoutingKey:      {0}", basicDeliverEventArgs.RoutingKey);
-                Console.Out.WriteLine("Exchange:        {0}", decode((byte[])getHeader("exchange_name")));
-                var body = decode(basicDeliverEventArgs.Body);
-                Console.Out.WriteLine(body);
-                Console.Out.WriteLine("");
-            }
-
-            if (options.csvoutput != null)
-            {
-                //CSV Output
-                //Message#,Date Time,Routing Key,Exchange,Body
-                var columnlist = new List<string>
-                    {
-                        msgCount.ToString(CultureInfo.InvariantCulture),
-                        DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                        basicDeliverEventArgs.RoutingKey,
-                        decode((byte[]) getHeader("exchange_name")),
-                        decode(basicDeliverEventArgs.Body)
-                    };
-
-                csvFile.WriteRow(columnlist);
-
-            }
+            //return disposable;
         }
     }
 

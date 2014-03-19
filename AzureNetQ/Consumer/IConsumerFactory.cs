@@ -7,10 +7,7 @@ namespace AzureNetQ.Consumer
     public interface IConsumerFactory : IDisposable
     {
         IConsumer CreateConsumer(
-            IQueue queue, 
-            Func<Byte[], MessageProperties, MessageReceivedInfo, Task> onMessage, 
-            IPersistentConnection connection,
-            IConsumerConfiguration configuration
-            );
+            IQueue queue,
+            IConsumerConfiguration configuration);
     }
 }
