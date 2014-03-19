@@ -84,10 +84,6 @@
       <Project>{9888950b-ef30-4763-9076-38b071cdb535}</Project>
       <Name>AzureNetQ.Management.Client</Name>
     </ProjectReference>
-    <ProjectReference Include="..\AzureNetQ.Tests.Messages\AzureNetQ.Tests.Messages.csproj">
-      <Project>{E7AF3836-8354-4CDE-A9E7-352569B65B1E}</Project>
-      <Name>AzureNetQ.Tests.Messages</Name>
-    </ProjectReference>
     <ProjectReference Include="..\AzureNetQ\AzureNetQ.csproj">
       <Project>{B8DEF709-5168-48F1-B8D3-AD44E4A4A22B}</Project>
       <Name>AzureNetQ</Name>

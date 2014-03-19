@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using AzureNetQ.Consumer;
 using AzureNetQ.FluentConfiguration;
 using AzureNetQ.Producer;
-using AzureNetQ.Topology;
 
 namespace AzureNetQ
 {

@@ -4,6 +4,35 @@ using AzureNetQ.Loggers;
 
 namespace AzureNetQ.Tests.SimpleRequester
 {
+    [Serializable]
+    public class TestRequestMessage
+    {
+        public long Id { get; set; }
+        public string Text { get; set; }
+        public bool CausesExceptionInServer { get; set; }
+        public string ExceptionInServerMessage { get; set; }
+        public bool CausesServerToTakeALongTimeToRespond { get; set; }
+    }
+
+    [Serializable]
+    public class TestResponseMessage
+    {
+        public long Id { get; set; }
+        public string Text { get; set; }
+    }
+
+    [Serializable]
+    public class TestAsyncRequestMessage
+    {
+        public string Text { get; set; }
+    }
+
+    [Serializable]
+    public class TestAsyncResponseMessage
+    {
+        public string Text { get; set; }
+    }
+
     class Program
     {
         private static readonly IBus bus;

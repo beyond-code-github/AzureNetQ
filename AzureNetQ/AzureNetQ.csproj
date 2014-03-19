@@ -69,12 +69,10 @@
     <Compile Include="Conventions.cs" />
     <Compile Include="CorrelationIdGenerator.cs" />
     <Compile Include="AutoSubscribe\DefaultAutoSubscriberMessageDispatcher.cs" />
-    <Compile Include="DefaultServiceProvider.cs" />
     <Compile Include="Delegates.cs" />
     <Compile Include="AzureNetQException.cs" />
     <Compile Include="FluentConfiguration\ISubscriptionConfiguration.cs" />
     <Compile Include="IBus.cs" />
-    <Compile Include="IClusterHostSelectionStrategy.cs" />
     <Compile Include="AutoSubscribe\IConsume.cs" />
     <Compile Include="Consumer\IConsumerDispatcher.cs" />
     <Compile Include="Consumer\IConsumerDispatcherFactory.cs" />
@@ -85,7 +83,6 @@
     <Compile Include="ISerializer.cs" />
     <Compile Include="IServiceProvider.cs" />
     <Compile Include="JsonSerializer.cs" />
-    <Compile Include="LinqExtensions.cs" />
     <Compile Include="Loggers\ConsoleLogger.cs" />
     <Compile Include="Loggers\DelegateLogger.cs" />
     <Compile Include="Loggers\NullLogger.cs" />
@@ -93,7 +90,6 @@
     <Compile Include="MessageReceivedInfo.cs" />
     <Compile Include="Producer\IRpc.cs" />
     <Compile Include="Producer\ISendReceive.cs" />
-    <Compile Include="Producer\PublishNackedException.cs" />
     <Compile Include="Producer\Rpc.cs" />
     <Compile Include="Producer\SendReceive.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -101,7 +97,6 @@
     <Compile Include="TaskHelpers.cs" />
     <Compile Include="Topology\IQueue.cs" />
     <Compile Include="Topology\Queue.cs" />
-    <Compile Include="DefaultClusterHostSelectionStrategy.cs" />
     <Compile Include="TypeNameSerializer.cs" />
     <Compile Include="Preconditions.cs" />
   </ItemGroup>
