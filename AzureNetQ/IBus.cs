@@ -50,27 +50,17 @@ namespace AzureNetQ
         /// Subscribes to a stream of messages that match a .NET type.
         /// </summary>
         /// <typeparam name="T">The type to subscribe to</typeparam>
-        /// <param name="subscriptionId">
-        /// A unique identifier for the subscription. Two subscriptions with the same subscriptionId
-        /// and type will get messages delivered in turn. This is useful if you want multiple subscribers
-        /// to load balance a subscription in a round-robin fashion.
-        /// </param>
         /// <param name="onMessage">
         /// The action to run when a message arrives. When onMessage completes the message
         /// recipt is Ack'd. All onMessage delegates are processed on a single thread so you should
         /// avoid long running blocking IO operations. Consider using SubscribeAsync
         /// </param>
-        IDisposable Subscribe<T>(string subscriptionId, Action<T> onMessage) where T : class;
+        IDisposable Subscribe<T>(Action<T> onMessage) where T : class;
 
         /// <summary>
         /// Subscribes to a stream of messages that match a .NET type.
         /// </summary>
         /// <typeparam name="T">The type to subscribe to</typeparam>
-        /// <param name="subscriptionId">
-        /// A unique identifier for the subscription. Two subscriptions with the same subscriptionId
-        /// and type will get messages delivered in turn. This is useful if you want multiple subscribers
-        /// to load balance a subscription in a round-robin fashion.
-        /// </param>
         /// <param name="onMessage">
         /// The action to run when a message arrives. When onMessage completes the message
         /// recipt is Ack'd. All onMessage delegates are processed on a single thread so you should
@@ -79,7 +69,7 @@ namespace AzureNetQ
         /// <param name="configure">
         /// Fluent configuration e.g. x => x.WithTopic("uk.london")
         /// </param>
-        IDisposable Subscribe<T>(string subscriptionId, Action<T> onMessage, Action<ISubscriptionConfiguration> configure) 
+        IDisposable Subscribe<T>(Action<T> onMessage, Action<ISubscriptionConfiguration> configure) 
             where T : class;
 
         /// <summary>
@@ -87,27 +77,17 @@ namespace AzureNetQ
         /// Allows the subscriber to complete asynchronously.
         /// </summary>
         /// <typeparam name="T">The type to subscribe to</typeparam>
-        /// <param name="subscriptionId">
-        /// A unique identifier for the subscription. Two subscriptions with the same subscriptionId
-        /// and type will get messages delivered in turn. This is useful if you want multiple subscribers
-        /// to load balance a subscription in a round-robin fashion.
-        /// </param>
         /// <param name="onMessage">
         /// The action to run when a message arrives. onMessage can immediately return a Task and
         /// then continue processing asynchronously. When the Task completes the message will be
         /// Ack'd.
         /// </param>
-        IDisposable SubscribeAsync<T>(string subscriptionId, Func<T, Task> onMessage) where T : class;
+        IDisposable SubscribeAsync<T>(Func<T, Task> onMessage) where T : class;
 
         /// <summary>
         /// Subscribes to a stream of messages that match a .NET type.
         /// </summary>
         /// <typeparam name="T">The type to subscribe to</typeparam>
-        /// <param name="subscriptionId">
-        /// A unique identifier for the subscription. Two subscriptions with the same subscriptionId
-        /// and type will get messages delivered in turn. This is useful if you want multiple subscribers
-        /// to load balance a subscription in a round-robin fashion.
-        /// </param>
         /// <param name="onMessage">
         /// The action to run when a message arrives. onMessage can immediately return a Task and
         /// then continue processing asynchronously. When the Task completes the message will be
@@ -116,7 +96,7 @@ namespace AzureNetQ
         /// <param name="configure">
         /// Fluent configuration e.g. x => x.WithTopic("uk.london").WithArgument("x-message-ttl", "60")
         /// </param>
-        IDisposable SubscribeAsync<T>(string subscriptionId, Func<T, Task> onMessage, Action<ISubscriptionConfiguration> configure) 
+        IDisposable SubscribeAsync<T>(Func<T, Task> onMessage, Action<ISubscriptionConfiguration> configure) 
             where T : class;
 
         /// <summary>

@@ -70,18 +70,17 @@ namespace AzureNetQ
             throw new NotImplementedException();
         }
 
-        public virtual IDisposable Subscribe<T>(string subscriptionId, Action<T> onMessage) where T : class
+        public virtual IDisposable Subscribe<T>(Action<T> onMessage) where T : class
         {
-            return Subscribe(subscriptionId, onMessage, x => { });
+            return Subscribe(onMessage, x => { });
         }
 
-        public virtual IDisposable Subscribe<T>(string subscriptionId, Action<T> onMessage, Action<ISubscriptionConfiguration> configure) where T : class
+        public virtual IDisposable Subscribe<T>(Action<T> onMessage, Action<ISubscriptionConfiguration> configure) where T : class
         {
-            Preconditions.CheckNotNull(subscriptionId, "subscriptionId");
             Preconditions.CheckNotNull(onMessage, "onMessage");
             Preconditions.CheckNotNull(configure, "configure");
 
-            return SubscribeAsync<T>(subscriptionId, msg =>
+            return SubscribeAsync<T>(msg =>
             {
                 var tcs = new TaskCompletionSource<object>();
                 try
@@ -93,27 +92,26 @@ namespace AzureNetQ
                 {
                     tcs.SetException(exception);
                 }
+
                 return tcs.Task;
             },
             configure);
         }
 
-        public virtual IDisposable SubscribeAsync<T>(string subscriptionId, Func<T, Task> onMessage) where T : class
+        public virtual IDisposable SubscribeAsync<T>(Func<T, Task> onMessage) where T : class
         {
-            return SubscribeAsync(subscriptionId, onMessage, x => { });
+            return SubscribeAsync(onMessage, x => { });
         }
 
-        public virtual IDisposable SubscribeAsync<T>(string subscriptionId, Func<T, Task> onMessage, Action<ISubscriptionConfiguration> configure) where T : class
+        public virtual IDisposable SubscribeAsync<T>(Func<T, Task> onMessage, Action<ISubscriptionConfiguration> configure) where T : class
         {
-            Preconditions.CheckNotNull(subscriptionId, "subscriptionId");
             Preconditions.CheckNotNull(onMessage, "onMessage");
             Preconditions.CheckNotNull(configure, "configure");
 
             var configuration = new SubscriptionConfiguration();
             configure(configuration);
 
-            var queueName = conventions.QueueNamingConvention(typeof(T), subscriptionId);
-            var exchangeName = conventions.ExchangeNamingConvention(typeof(T));
+            var queueName = conventions.QueueNamingConvention(typeof(T));
 
             throw new NotImplementedException();
         }
