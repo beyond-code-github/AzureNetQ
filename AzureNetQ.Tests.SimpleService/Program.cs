@@ -6,84 +6,66 @@ using AzureNetQ.Loggers;
 
 namespace AzureNetQ.Tests.SimpleService
 {
-    [Serializable]
-    public class TestRequestMessage
-    {
-        public long Id { get; set; }
-        public string Text { get; set; }
-        public bool CausesExceptionInServer { get; set; }
-        public string ExceptionInServerMessage { get; set; }
-        public bool CausesServerToTakeALongTimeToRespond { get; set; }
-    }
+    using AzureNetQ.Tests.Messages;
 
-    [Serializable]
-    public class TestResponseMessage
-    {
-        public long Id { get; set; }
-        public string Text { get; set; }
-    }
-
-    [Serializable]
-    public class TestAsyncRequestMessage
-    {
-        public string Text { get; set; }
-    }
-
-    [Serializable]
-    public class TestAsyncResponseMessage
-    {
-        public string Text { get; set; }
-    }
-    
     class Program
     {
         static void Main(string[] args)
         {
-            throw new NotImplementedException();
+            var bus =
+                AzureBusFactory.CreateBus(
+                    new AzureNetQSettings
+                        {
+                            Logger = () => new NoDebugLogger(),
+                            ConnectionConfiguration = () => new ConnectionConfiguration
+                                                                {
+                                                                    PrefetchCount = 400,
+                                                                    MaxConcurrentCalls = 100,
+                                                                    BatchingInterval = TimeSpan.FromMilliseconds(100)
+                                                                }
+                        });
 
-            //var bus = RabbitHutch.CreateBus("host=localhost",
-            //    x => x.Register<IAzureNetQLogger>(_ => new NoDebugLogger()));
-            //bus.Respond<TestRequestMessage, TestResponseMessage>(HandleRequest);
-            //bus.RespondAsync<TestAsyncRequestMessage, TestAsyncResponseMessage>(HandleAsyncRequest);
+            bus.RespondAsync<TestAsyncRequestMessage, TestAsyncResponseMessage>(HandleAsyncRequest);
 
-            //Console.WriteLine("Waiting to service requests");
-            //Console.WriteLine("Ctrl-C to exit");
+            Console.WriteLine("Waiting to service requests");
+            Console.WriteLine("Ctrl-C to exit");
 
-            //Console.CancelKeyPress += (source, cancelKeyPressArgs) =>
-            //{
-            //    bus.Dispose();
-            //    Console.WriteLine("Shut down complete");
-            //};
+            Console.CancelKeyPress += (source, cancelKeyPressArgs) =>
+            {
+                bus.Dispose();
+                Console.WriteLine("Shut down complete");
+            };
 
-            //Thread.Sleep(Timeout.Infinite);
+            Thread.Sleep(Timeout.Infinite);
         }
 
         private static Task<TestAsyncResponseMessage> HandleAsyncRequest(TestAsyncRequestMessage request)
         {
-            Console.Out.WriteLine("Got aysnc request '{0}'", request.Text);
+            Console.WriteLine("Handling request: {0}", request.Text);
 
-            return RunDelayed(1000, () =>
-            {
-                Console.Out.WriteLine("Sending response");
-                return new TestAsyncResponseMessage {Text = request.Text + " ... completed."};
-            });
+            var tcs = new TaskCompletionSource<TestAsyncResponseMessage>();
+            tcs.SetResult(new TestAsyncResponseMessage { Id = request.Id, Text = request.Text + " ... completed." });
+
+            return tcs.Task;
         }
 
         public static TestResponseMessage HandleRequest(TestRequestMessage request)
         {
-            // Console.WriteLine("Handling request: {0}", request.Text);
+            Console.WriteLine("Handling request: {0}", request.Text);
             if (request.CausesServerToTakeALongTimeToRespond)
             {
                 Console.Out.WriteLine("Taking a long time to respond...");
                 Thread.Sleep(5000);
                 Console.Out.WriteLine("... responding");
             }
+
             if (request.CausesExceptionInServer)
             {
                 if (request.ExceptionInServerMessage != null)
                     throw new SomeRandomException(request.ExceptionInServerMessage);
                 throw new SomeRandomException("Something terrible has just happened!");
             }
+
             return new TestResponseMessage{ Id = request.Id, Text = request.Text + " all done!" };
         }
 

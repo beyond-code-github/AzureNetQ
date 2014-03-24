@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using AzureNetQ.Topology;
-
-namespace AzureNetQ.Producer
+﻿namespace AzureNetQ.Producer
 {
+    using System;
+    using System.Collections.Concurrent;
+    using System.Threading;
+    using System.Threading.Tasks;
+
+    using Microsoft.ServiceBus.Messaging;
+
     /// <summary>
     /// Default implementation of AzureNetQ's request-response pattern
     /// </summary>
@@ -14,74 +14,167 @@ namespace AzureNetQ.Producer
     {
         private readonly IConventions conventions;
 
-        public Rpc(IConventions conventions)
+        private readonly IAzureAdvancedBus advancedBus;
+
+        private readonly IConnectionConfiguration configuration;
+
+        private readonly ConcurrentDictionary<RpcKey, string> responseQueues = new ConcurrentDictionary<RpcKey, string>();
+
+        private readonly ConcurrentDictionary<string, ResponseAction> responseActions = new ConcurrentDictionary<string, ResponseAction>();
+
+        private readonly TimeSpan disablePeriodicSignaling = TimeSpan.FromMilliseconds(-1);
+        
+        private const string ReplyToKey = "ReplyTo";
+
+        private const string IsFaultedKey = "IsFaulted";
+
+        private const string ExceptionMessageKey = "ExceptionMessage";
+
+        public Rpc(IConventions conventions, IAzureAdvancedBus advancedBus, IConnectionConfiguration configuration)
         {
             Preconditions.CheckNotNull(conventions, "conventions");
+            Preconditions.CheckNotNull(advancedBus, "advancedBus");
+            Preconditions.CheckNotNull(configuration, "configuration");
+
             this.conventions = conventions;
+            this.advancedBus = advancedBus;
+            this.configuration = configuration;
         }
-        
-        public Task<TResponse> Request<TRequest, TResponse>(TRequest request) 
-            where TRequest : class 
+
+        public Task<TResponse> Request<TRequest, TResponse>(TRequest request)
+            where TRequest : class
             where TResponse : class
         {
             Preconditions.CheckNotNull(request, "request");
 
-            throw new NotImplementedException();
-        }
-        
-        private struct RpcKey
-        {
-            public Type Request;
-            public Type Response;
+            var correlationId = Guid.NewGuid();
+            var tcs = new TaskCompletionSource<TResponse>();
+
+            var timer = new Timer(state =>
+            {
+                ((Timer)state).Dispose();
+                tcs.TrySetException(new TimeoutException(
+                    string.Format("Request timed out. CorrelationId: {0}", correlationId.ToString())));
+            });
+
+            timer.Change(TimeSpan.FromSeconds(configuration.Timeout), disablePeriodicSignaling);
+            
+            responseActions.TryAdd(
+                correlationId.ToString(),
+                new ResponseAction
+                    {
+                        OnSuccess = message => tcs.TrySetResult(message.GetBody<TResponse>()),
+                        OnFailure = () =>
+                            tcs.TrySetException(
+                                new AzureNetQException(
+                                "Connection lost while request was in-flight. CorrelationId: {0}",
+                                correlationId.ToString()))
+                    });
+
+            var queueName = SubscribeToResponse<TRequest, TResponse>();
+            RequestPublish(request, queueName, correlationId);
+
+            return tcs.Task;
         }
 
-        public IDisposable Respond<TRequest, TResponse>(Func<TRequest, Task<TResponse>> responder) 
-            where TRequest : class 
+        private string SubscribeToResponse<TRequest, TResponse>()
+            where TResponse : class
+        {
+            var rpcKey = new RpcKey { Request = typeof(TRequest), Response = typeof(TResponse) };
+
+            responseQueues.AddOrUpdate(rpcKey,
+                key =>
+                {
+                    var name = conventions.RpcReturnQueueNamingConvention();
+                    var queue = advancedBus.QueueDeclare(name);
+                    queue.OnMessageAsync(message => Task.Factory.StartNew(() =>
+                    {
+                        ResponseAction responseAction;
+                        if (responseActions.TryRemove(message.CorrelationId, out responseAction))
+                        {
+                            responseAction.OnSuccess(message);
+                        }
+
+                        // advancedBus.QueueDelete(name);
+                    }), new OnMessageOptions { AutoComplete = true, MaxConcurrentCalls = configuration.MaxConcurrentCalls });
+
+                    return name;
+                },
+                (_, queueName) => queueName);
+
+            return responseQueues[rpcKey];
+        }
+
+        private void RequestPublish<TRequest>(TRequest request, string returnQueueName, Guid correlationId) where TRequest : class
+        {
+            var requestMessage = new BrokeredMessage(request)
+                                     {
+                                         CorrelationId = correlationId.ToString(),
+                                         TimeToLive = TimeSpan.FromMilliseconds(configuration.Timeout * 1000)
+                                     };
+
+            requestMessage.Properties.Add(ReplyToKey, returnQueueName);
+
+            var routingKey = conventions.QueueNamingConvention(typeof(TRequest));
+            var queue = this.advancedBus.QueueDeclare(routingKey);
+
+            queue.SendAsync(requestMessage);
+        }
+
+        public IDisposable Respond<TRequest, TResponse>(Func<TRequest, Task<TResponse>> responder)
+            where TRequest : class
             where TResponse : class
         {
             Preconditions.CheckNotNull(responder, "responder");
 
             var routingKey = conventions.RpcRoutingKeyNamingConvention(typeof(TRequest));
+            var queue = advancedBus.QueueDeclare(routingKey);
 
-            throw new NotImplementedException();
+            queue.OnMessageAsync(
+                requestMessage =>
+                    {
+                        var tcs = new TaskCompletionSource<object>();
 
-            //var exchange = advancedBus.ExchangeDeclare(conventions.RpcExchangeNamingConvention(), ExchangeType.Direct);
-            //var queue = advancedBus.QueueDeclare(routingKey);
-            //advancedBus.Bind(exchange, queue, routingKey);
+                        responder(requestMessage.GetBody<TRequest>()).ContinueWith(
+                            task =>
+                                {
+                                    var responseQueue =
+                                        advancedBus.QueueDeclare(requestMessage.Properties[ReplyToKey] as string);
+                                    if (task.IsFaulted)
+                                    {
+                                        if (task.Exception != null)
+                                        {
+                                            var body = Activator.CreateInstance<TResponse>();
+                                            var responseMessage = new BrokeredMessage(body);
+                                            responseMessage.Properties.Add(IsFaultedKey, true);
+                                            responseMessage.Properties.Add(
+                                                ExceptionMessageKey,
+                                                task.Exception.InnerException.Message);
+                                            responseMessage.CorrelationId = requestMessage.CorrelationId;
 
-            //return advancedBus.Consume<TRequest>(queue, (requestMessage, messageRecievedInfo) =>
-            //    {
-            //        var tcs = new TaskCompletionSource<object>();
+                                            responseQueue.SendAsync(responseMessage);
+                                            tcs.SetException(task.Exception);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        var responseMessage = new BrokeredMessage(task.Result)
+                                                                  {
+                                                                      CorrelationId =
+                                                                          requestMessage
+                                                                          .CorrelationId
+                                                                  };
 
-            //        responder(requestMessage.Body).ContinueWith(task =>
-            //            {
-            //                throw new NotImplementedException();
-            //                //if (task.IsFaulted)
-            //                //{
-            //                //    if (task.Exception != null)
-            //                //    {
-            //                //        var body = Activator.CreateInstance<TResponse>();
-            //                //        var responseMessage = new Message<TResponse>(body);
-            //                //        responseMessage.Properties.Headers.Add(IsFaultedKey, true);
-            //                //        responseMessage.Properties.Headers.Add(ExceptionMessageKey, task.Exception.InnerException.Message);
-            //                //        responseMessage.Properties.CorrelationId = requestMessage.Properties.CorrelationId;
+                                        responseQueue.SendAsync(responseMessage);
+                                        tcs.SetResult(null);
+                                    }
+                                });
 
-            //                //        advancedBus.Publish(Exchange.GetDefault(), requestMessage.Properties.ReplyTo, false, false, responseMessage);
-            //                //        tcs.SetException(task.Exception);
-            //                //    }
-            //                //}
-            //                //else
-            //                //{
-            //                //    var responseMessage = new Message<TResponse>(task.Result);
-            //                //    responseMessage.Properties.CorrelationId = requestMessage.Properties.CorrelationId;
+                        return tcs.Task;
+                    },
+                new OnMessageOptions { AutoComplete = true, MaxConcurrentCalls = configuration.MaxConcurrentCalls });
 
-            //                //    advancedBus.Publish(Exchange.GetDefault(), requestMessage.Properties.ReplyTo, false, false, responseMessage);
-            //                //    tcs.SetResult(null);
-            //                //}
-            //            });
-
-            //        return tcs.Task;
-            //    });
+            return null;
         }
     }
 }

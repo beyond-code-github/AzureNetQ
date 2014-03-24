@@ -12,7 +12,7 @@ namespace AzureNetQ
     {
         public Type DeSerialize(string typeName)
         {
-            var nameParts = typeName.Split(':');
+            var nameParts = typeName.Split('-');
             if (nameParts.Length != 2)
             {
                 throw new AzureNetQException(
@@ -32,7 +32,7 @@ namespace AzureNetQ
         public string Serialize(Type type)
         {
             Preconditions.CheckNotNull(type, "type");
-            var typeName = type.FullName + ":" + type.Assembly.GetName().Name;
+            var typeName = type.FullName + "-" + type.Assembly.GetName().Name;
             if (typeName.Length > 255)
             {
                 throw new AzureNetQException("The serialized name of type '{0}' exceeds the AMQP" + 

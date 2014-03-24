@@ -4,44 +4,27 @@ using AzureNetQ.Loggers;
 
 namespace AzureNetQ.Tests.SimpleRequester
 {
-    [Serializable]
-    public class TestRequestMessage
-    {
-        public long Id { get; set; }
-        public string Text { get; set; }
-        public bool CausesExceptionInServer { get; set; }
-        public string ExceptionInServerMessage { get; set; }
-        public bool CausesServerToTakeALongTimeToRespond { get; set; }
-    }
-
-    [Serializable]
-    public class TestResponseMessage
-    {
-        public long Id { get; set; }
-        public string Text { get; set; }
-    }
-
-    [Serializable]
-    public class TestAsyncRequestMessage
-    {
-        public string Text { get; set; }
-    }
-
-    [Serializable]
-    public class TestAsyncResponseMessage
-    {
-        public string Text { get; set; }
-    }
+    using AzureNetQ.Tests.Messages;
 
     class Program
     {
-        private static readonly IBus bus;
-        // = RabbitHutch.CreateBus("host=localhost",
-        //    x => x.Register(_ => new NoDebugLogger()));
-
+        private static readonly IBus bus =
+            AzureBusFactory.CreateBus(
+                new AzureNetQSettings
+                    {
+                        Logger = () => new NoDebugLogger(),
+                        ConnectionConfiguration = () => new ConnectionConfiguration
+                        {
+                            PrefetchCount = 400,
+                            MaxConcurrentCalls = 100,
+                            BatchingInterval = TimeSpan.FromMilliseconds(100)
+                        }
+                    });
+        
         private static long count = 0;
 
         private static readonly ILatencyRecorder latencyRecorder = new LatencyRecorder();
+        
         private const int publishIntervalMilliseconds = 10;
 
         static void Main(string[] args)
@@ -72,12 +55,28 @@ namespace AzureNetQ.Tests.SimpleRequester
             {
                 lock (requestLock)
                 {
-                    bus.RequestAsync<TestRequestMessage, TestResponseMessage>(
-                        new TestRequestMessage
+                    Console.WriteLine(string.Format("Sending {0}", count));
+                    bus.RequestAsync<TestAsyncRequestMessage, TestAsyncResponseMessage>(
+                        new TestAsyncRequestMessage
                         {
                             Id = count,
                             Text = string.Format("Hello from client number: {0}! ", count)
-                        }).ContinueWith(t => ResponseHandler(t.Result));
+                        }).ContinueWith(
+                            t =>
+                                {
+                                    if (t.IsFaulted && t.Exception != null)
+                                    {
+                                        foreach (var exception in t.Exception.InnerExceptions)
+                                        {
+                                            Console.WriteLine("Exception thrown by Response: {0}", exception.Message);
+                                        }
+
+                                        return;
+                                    }
+
+                                    ResponseHandler(t.Result);
+                                });
+
                     latencyRecorder.RegisterRequest(count);
                     count++;
                 }
@@ -87,8 +86,8 @@ namespace AzureNetQ.Tests.SimpleRequester
                 Console.WriteLine("Exception thrown by Publish: {0}", exception.Message);
             }
         }
-
-        static void ResponseHandler(TestResponseMessage response)
+        
+        static void ResponseHandler(TestAsyncResponseMessage response)
         {
             Console.WriteLine("Response: {0}", response.Text);
             latencyRecorder.RegisterResponse(response.Id);

@@ -48,8 +48,8 @@ namespace AzureNetQ.Tests.SimpleRequester
 
         public void Report(object status)
         {
-            var ticksTenSecondsAgo = DateTime.Now.AddSeconds(-10).Ticks;
-            var lateResponses = requests.Where(x => (!x.Value.HasResponded) && (x.Value.Ticks < ticksTenSecondsAgo));
+            var ticks = DateTime.Now.AddSeconds(-10).Ticks;
+            var lateResponses = requests.Where(x => (!x.Value.HasResponded) && (x.Value.Ticks < ticks));
 
             var reponded = requests.Count(x => x.Value.HasResponded);
 

@@ -12,7 +12,8 @@
     <AssemblyName>AzureNetQ</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
   </PropertyGroup>
@@ -36,6 +37,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.ServiceBus, Version=2.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\WindowsAzure.ServiceBus.2.2.7.0\lib\net40-full\Microsoft.ServiceBus.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.WindowsAzure.Configuration, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.WindowsAzure.ConfigurationManager.2.0.3\lib\net40\Microsoft.WindowsAzure.Configuration.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.4.5.11\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -43,6 +50,8 @@
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Version.cs">
@@ -52,6 +61,9 @@
     <Compile Include="AutoSubscribe\ForTopicAttribute.cs" />
     <Compile Include="AutoSubscribe\IConsumeAsync.cs" />
     <Compile Include="AutoSubscribe\AutoSubscriberConsumerAttribute.cs" />
+    <Compile Include="AzureAdvancedBus.cs" />
+    <Compile Include="AzureBusFactory.cs" />
+    <Compile Include="AzureNetQSettings.cs" />
     <Compile Include="Consumer\IConsumerConfiguration.cs" />
     <Compile Include="Consumer\IHandlerRegistration.cs" />
     <Compile Include="Consumer\IReceiveRegistration.cs" />
@@ -69,6 +81,7 @@
     <Compile Include="Consumer\IConsumerDispatcher.cs" />
     <Compile Include="Consumer\IConsumerDispatcherFactory.cs" />
     <Compile Include="IAzureNetQLogger.cs" />
+    <Compile Include="IConnectionConfiguration.cs" />
     <Compile Include="IMessage.cs" />
     <Compile Include="AutoSubscribe\IAutoSubscriberMessageDispatcher.cs" />
     <Compile Include="ISaga.cs" />
@@ -78,11 +91,12 @@
     <Compile Include="Loggers\ConsoleLogger.cs" />
     <Compile Include="Loggers\DelegateLogger.cs" />
     <Compile Include="Loggers\NullLogger.cs" />
-    <Compile Include="Message.cs" />
     <Compile Include="MessageReceivedInfo.cs" />
     <Compile Include="Producer\IRpc.cs" />
     <Compile Include="Producer\ISendReceive.cs" />
+    <Compile Include="Producer\ResponseAction.cs" />
     <Compile Include="Producer\Rpc.cs" />
+    <Compile Include="Producer\RpcKey.cs" />
     <Compile Include="Producer\SendReceive.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AzureBus.cs" />
@@ -93,6 +107,7 @@
     <Compile Include="Preconditions.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />
