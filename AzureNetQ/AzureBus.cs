@@ -6,12 +6,15 @@ using AzureNetQ.Producer;
 
 namespace AzureNetQ
 {
+    using Microsoft.ServiceBus.Messaging;
+
     public class AzureBus : IBus
     {
         private readonly IAzureNetQLogger logger;
         private readonly IConventions conventions;
         private readonly IRpc rpc;
         private readonly ISendReceive sendReceive;
+        private readonly IAzureAdvancedBus advancedBus;
 
         public IAzureNetQLogger Logger
         {
@@ -27,17 +30,20 @@ namespace AzureNetQ
             IAzureNetQLogger logger,
             IConventions conventions,
             IRpc rpc,
-            ISendReceive sendReceive)
+            ISendReceive sendReceive, 
+            IAzureAdvancedBus advancedBus)
         {
             Preconditions.CheckNotNull(logger, "logger");
             Preconditions.CheckNotNull(conventions, "conventions");
             Preconditions.CheckNotNull(rpc, "rpc");
             Preconditions.CheckNotNull(sendReceive, "sendReceive");
+            Preconditions.CheckNotNull(advancedBus, "advancedBus");
 
             this.logger = logger;
             this.conventions = conventions;
             this.rpc = rpc;
             this.sendReceive = sendReceive;
+            this.advancedBus = advancedBus;
         }
 
         public void Publish<T>(T message) where T : class
@@ -66,21 +72,26 @@ namespace AzureNetQ
         {
             Preconditions.CheckNotNull(message, "message");
             Preconditions.CheckNotNull(topic, "topic");
-            
-            throw new NotImplementedException();
+
+
+            var queueName = conventions.QueueNamingConvention(typeof(T));
+            var queue = advancedBus.QueueDeclare(queueName);
+
+            var azureNetQMessage = new BrokeredMessage(message);
+            return queue.SendAsync(azureNetQMessage);
         }
 
-        public virtual IDisposable Subscribe<T>(Action<T> onMessage) where T : class
+        public virtual void Subscribe<T>(Action<T> onMessage) where T : class
         {
-            return Subscribe(onMessage, x => { });
+            Subscribe(onMessage, x => { });
         }
 
-        public virtual IDisposable Subscribe<T>(Action<T> onMessage, Action<ISubscriptionConfiguration> configure) where T : class
+        public virtual void Subscribe<T>(Action<T> onMessage, Action<ISubscriptionConfiguration> configure) where T : class
         {
             Preconditions.CheckNotNull(onMessage, "onMessage");
             Preconditions.CheckNotNull(configure, "configure");
 
-            return SubscribeAsync<T>(msg =>
+            SubscribeAsync<T>(msg =>
             {
                 var tcs = new TaskCompletionSource<object>();
                 try
@@ -98,12 +109,12 @@ namespace AzureNetQ
             configure);
         }
 
-        public virtual IDisposable SubscribeAsync<T>(Func<T, Task> onMessage) where T : class
+        public virtual void SubscribeAsync<T>(Func<T, Task> onMessage) where T : class
         {
-            return SubscribeAsync(onMessage, x => { });
+            SubscribeAsync(onMessage, x => { });
         }
 
-        public virtual IDisposable SubscribeAsync<T>(Func<T, Task> onMessage, Action<ISubscriptionConfiguration> configure) where T : class
+        public virtual void SubscribeAsync<T>(Func<T, Task> onMessage, Action<ISubscriptionConfiguration> configure) where T : class
         {
             Preconditions.CheckNotNull(onMessage, "onMessage");
             Preconditions.CheckNotNull(configure, "configure");
@@ -112,8 +123,9 @@ namespace AzureNetQ
             configure(configuration);
 
             var queueName = conventions.QueueNamingConvention(typeof(T));
+            var queue = advancedBus.QueueDeclare(queueName);
 
-            throw new NotImplementedException();
+            queue.OnMessageAsync(message => onMessage(message.GetBody<T>()));
         }
 
         public TResponse Request<TRequest, TResponse>(TRequest request)
@@ -136,7 +148,7 @@ namespace AzureNetQ
             return rpc.Request<TRequest, TResponse>(request);
         }
 
-        public virtual IDisposable Respond<TRequest, TResponse>(Func<TRequest, TResponse> responder)
+        public virtual void Respond<TRequest, TResponse>(Func<TRequest, TResponse> responder)
             where TRequest : class
             where TResponse : class
         {
@@ -145,16 +157,16 @@ namespace AzureNetQ
             Func<TRequest, Task<TResponse>> taskResponder =
                 request => Task<TResponse>.Factory.StartNew(_ => responder(request), null);
 
-            return RespondAsync(taskResponder);
+            RespondAsync(taskResponder);
         }
 
-        public virtual IDisposable RespondAsync<TRequest, TResponse>(Func<TRequest, Task<TResponse>> responder)
+        public virtual void RespondAsync<TRequest, TResponse>(Func<TRequest, Task<TResponse>> responder)
             where TRequest : class
             where TResponse : class
         {
             Preconditions.CheckNotNull(responder, "responder");
 
-            return rpc.Respond(responder);
+            rpc.Respond(responder);
         }
 
         public void Send<T>(string queue, T message)

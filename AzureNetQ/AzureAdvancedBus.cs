@@ -2,13 +2,16 @@
 {
     using System;
     using System.Collections.Concurrent;
+    using System.Configuration;
+    using System.Linq;
 
     using Microsoft.ServiceBus;
     using Microsoft.ServiceBus.Messaging;
+    using Microsoft.WindowsAzure;
 
     public interface IAzureAdvancedBus
     {
-        QueueClient QueueDeclare(string name);
+        QueueClient QueueDeclare(string name, bool autoDelete = false);
 
         void QueueDelete(string name);
     }
@@ -46,7 +49,7 @@
             this.configuration = configuration;
         }
 
-        public virtual QueueClient QueueDeclare(string name)
+        public virtual QueueClient QueueDeclare(string name, bool autoDelete = false)
         {
             Preconditions.CheckNotNull(name, "name");
 
@@ -55,12 +58,19 @@
                 {
                     if (!namespaceManager.QueueExists(s))
                     {
+                        var description = new QueueDescription(s);
+                        if (autoDelete)
+                        {
+                            description.AutoDeleteOnIdle = TimeSpan.FromMinutes(5);
+                        }
+                        
                         logger.DebugWrite("Declared Queue: '{0}'", name);
-                        namespaceManager.CreateQueue(s);
+                        namespaceManager.CreateQueue(description);
                     }
 
                     var client = messagingFactory.CreateQueueClient(s);
                     client.PrefetchCount = configuration.PrefetchCount;
+                    
                     return client;
                 });
         }

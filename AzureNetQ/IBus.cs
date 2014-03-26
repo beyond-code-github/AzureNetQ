@@ -55,7 +55,7 @@ namespace AzureNetQ
         /// recipt is Ack'd. All onMessage delegates are processed on a single thread so you should
         /// avoid long running blocking IO operations. Consider using SubscribeAsync
         /// </param>
-        IDisposable Subscribe<T>(Action<T> onMessage) where T : class;
+        void Subscribe<T>(Action<T> onMessage) where T : class;
 
         /// <summary>
         /// Subscribes to a stream of messages that match a .NET type.
@@ -69,7 +69,7 @@ namespace AzureNetQ
         /// <param name="configure">
         /// Fluent configuration e.g. x => x.WithTopic("uk.london")
         /// </param>
-        IDisposable Subscribe<T>(Action<T> onMessage, Action<ISubscriptionConfiguration> configure) 
+        void Subscribe<T>(Action<T> onMessage, Action<ISubscriptionConfiguration> configure) 
             where T : class;
 
         /// <summary>
@@ -82,7 +82,7 @@ namespace AzureNetQ
         /// then continue processing asynchronously. When the Task completes the message will be
         /// Ack'd.
         /// </param>
-        IDisposable SubscribeAsync<T>(Func<T, Task> onMessage) where T : class;
+        void SubscribeAsync<T>(Func<T, Task> onMessage) where T : class;
 
         /// <summary>
         /// Subscribes to a stream of messages that match a .NET type.
@@ -96,7 +96,7 @@ namespace AzureNetQ
         /// <param name="configure">
         /// Fluent configuration e.g. x => x.WithTopic("uk.london").WithArgument("x-message-ttl", "60")
         /// </param>
-        IDisposable SubscribeAsync<T>(Func<T, Task> onMessage, Action<ISubscriptionConfiguration> configure) 
+        void SubscribeAsync<T>(Func<T, Task> onMessage, Action<ISubscriptionConfiguration> configure) 
             where T : class;
 
         /// <summary>
@@ -129,7 +129,7 @@ namespace AzureNetQ
         /// <param name="responder">
         /// A function to run when the request is received. It should return the response.
         /// </param>
-        IDisposable Respond<TRequest, TResponse>(Func<TRequest, TResponse> responder) 
+        void Respond<TRequest, TResponse>(Func<TRequest, TResponse> responder) 
             where TRequest : class
             where TResponse : class;
 
@@ -141,7 +141,7 @@ namespace AzureNetQ
         /// <param name="responder">
         /// A function to run when the request is received.
         /// </param>
-        IDisposable RespondAsync<TRequest, TResponse>(Func<TRequest, Task<TResponse>> responder) 
+        void RespondAsync<TRequest, TResponse>(Func<TRequest, Task<TResponse>> responder) 
             where TRequest : class
             where TResponse : class;
 

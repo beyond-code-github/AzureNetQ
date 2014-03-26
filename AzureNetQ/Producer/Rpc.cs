@@ -86,7 +86,7 @@
                 key =>
                 {
                     var name = conventions.RpcReturnQueueNamingConvention();
-                    var queue = advancedBus.QueueDeclare(name);
+                    var queue = advancedBus.QueueDeclare(name, autoDelete: true);
                     queue.OnMessageAsync(message => Task.Factory.StartNew(() =>
                     {
                         ResponseAction responseAction;
@@ -94,8 +94,6 @@
                         {
                             responseAction.OnSuccess(message);
                         }
-
-                        // advancedBus.QueueDelete(name);
                     }), new OnMessageOptions { AutoComplete = true, MaxConcurrentCalls = configuration.MaxConcurrentCalls });
 
                     return name;
