@@ -1,7 +1,6 @@
 ﻿namespace AzureNetQ
 {
     using System;
-    using System.Threading;
 
     using AzureNetQ.Loggers;
     using AzureNetQ.Producer;
