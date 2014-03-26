@@ -30,8 +30,23 @@
 
         public AzureAdvancedBus(IAzureNetQLogger logger, IConnectionConfiguration configuration)
         {
-            this.namespaceManager = NamespaceManager.Create();
+            var connectionString = CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString");
+            this.namespaceManager = NamespaceManager.CreateFromConnectionString(connectionString);
 
+            var pairs = connectionString.Split(';')
+                .Select(o => o.Split('='))
+                .Where(o => o.Length > 1);
+
+            var dictionary = pairs.ToDictionary(key => key[0], value => value[1]);
+            var address = this.namespaceManager.Address;
+
+            int port;
+            if (dictionary.ContainsKey("Endpoint") && dictionary.ContainsKey("RuntimePort") && int.TryParse(dictionary["RuntimePort"], out port))
+            {
+                var template = new Uri(string.Format("{0}", dictionary["Endpoint"]));
+                address = new UriBuilder(template.Scheme, template.Host, port, template.PathAndQuery).Uri;
+            }
+            
             var mfs = new MessagingFactorySettings
                           {
                               TokenProvider = this.namespaceManager.Settings.TokenProvider,
@@ -41,8 +56,8 @@
                                   }
                           };
 
-            this.messagingFactory = MessagingFactory.Create(this.namespaceManager.Address, mfs);
-
+            this.messagingFactory = MessagingFactory.Create(address, mfs);
+            
             this.queues = new ConcurrentDictionary<string, QueueClient>();
 
             this.logger = logger;
