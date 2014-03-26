@@ -15,9 +15,9 @@ namespace AzureNetQ.Tests.SimpleRequester
                         Logger = () => new NoDebugLogger(),
                         ConnectionConfiguration = () => new ConnectionConfiguration
                         {
-                            PrefetchCount = 400,
+                            PrefetchCount = 200,
                             MaxConcurrentCalls = 100,
-                            BatchingInterval = TimeSpan.FromMilliseconds(100)
+                            BatchingInterval = TimeSpan.FromMilliseconds(50)
                         }
                     });
         
@@ -25,7 +25,7 @@ namespace AzureNetQ.Tests.SimpleRequester
 
         private static readonly ILatencyRecorder latencyRecorder = new LatencyRecorder();
         
-        private const int publishIntervalMilliseconds = 10;
+        private const int publishIntervalMilliseconds = 20;
 
         static void Main(string[] args)
         {
