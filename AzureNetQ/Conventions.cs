@@ -45,7 +45,7 @@ namespace AzureNetQ
 			TopicNamingConvention = messageType => "";
 			RpcRoutingKeyNamingConvention = typeNameSerializer.Serialize;
             ErrorQueueNamingConvention = () => "AzureNetQ_Default_Error_Queue";
-		    RpcReturnQueueNamingConvention = () => "easynetq.response." + Guid.NewGuid().ToString();
+		    RpcReturnQueueNamingConvention = () => "azurenetq.response." + Guid.NewGuid().ToString();
             ConsumerTagConvention = () => Guid.NewGuid().ToString();
 		    QueueNamingConvention = (messageType) =>
 		        {
