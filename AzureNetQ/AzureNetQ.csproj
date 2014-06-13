@@ -87,6 +87,7 @@
     <Compile Include="AutoSubscribe\DefaultAutoSubscriberMessageDispatcher.cs" />
     <Compile Include="Delegates.cs" />
     <Compile Include="AzureNetQException.cs" />
+    <Compile Include="FluentConfiguration\IPublishConfiguration.cs" />
     <Compile Include="FluentConfiguration\ISubscriptionConfiguration.cs" />
     <Compile Include="IBus.cs" />
     <Compile Include="AutoSubscribe\IConsume.cs" />

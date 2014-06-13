@@ -14,13 +14,19 @@
     {
         QueueClient QueueDeclare(string name, bool autoDelete = false);
 
-        TopicClient TopicDeclare(string name);
+        TopicClient TopicDeclare(string name, bool requiresDuplicateDetection);
 
-        SubscriptionClient SubscriptionDeclare(string name, string subscription);
+        SubscriptionClient SubscriptionDeclare(
+            string name,
+            string subscription,
+            ReceiveMode receiveMode,
+            bool requiresDuplicateDetection);
 
         void QueueDelete(string name);
 
         void TopicDelete(string topic);
+
+        TopicClient TopicFind(string name);
     }
 
     public class AzureAdvancedBus : IAzureAdvancedBus
@@ -44,15 +50,14 @@
             var connectionString = CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString");
             this.namespaceManager = NamespaceManager.CreateFromConnectionString(connectionString);
 
-            var pairs = connectionString.Split(';')
-                .Select(o => o.Split('='))
-                .Where(o => o.Length > 1);
+            var pairs = connectionString.Split(';').Select(o => o.Split('=')).Where(o => o.Length > 1);
 
             var dictionary = pairs.ToDictionary(key => key[0], value => value[1]);
             var address = this.namespaceManager.Address;
 
             int port;
-            if (dictionary.ContainsKey("Endpoint") && dictionary.ContainsKey("RuntimePort") && int.TryParse(dictionary["RuntimePort"], out port))
+            if (dictionary.ContainsKey("Endpoint") && dictionary.ContainsKey("RuntimePort")
+                && int.TryParse(dictionary["RuntimePort"], out port))
             {
                 var template = new Uri(string.Format("{0}", dictionary["Endpoint"]));
                 address = new UriBuilder(template.Scheme, template.Host, port, template.PathAndQuery).Uri;
@@ -63,7 +68,9 @@
                               TokenProvider = this.namespaceManager.Settings.TokenProvider,
                               NetMessagingTransportSettings =
                                   {
-                                      BatchFlushInterval = configuration.BatchingInterval
+                                      BatchFlushInterval =
+                                          configuration
+                                          .BatchingInterval
                                   }
                           };
 
@@ -107,28 +114,39 @@
                 });
         }
 
-        public SubscriptionClient SubscriptionDeclare(string name, string subscription)
+        public SubscriptionClient SubscriptionDeclare(
+            string name,
+            string subscription,
+            ReceiveMode receiveMode,
+            bool requiresDuplicateDetection)
         {
-            var topicClient = this.TopicDeclare(name);
+            var topicClient = this.TopicDeclare(name, requiresDuplicateDetection);
 
-            return this.subscriptions.GetOrAdd(BuildSubscriptionKey(name, subscription),
+            return this.subscriptions.GetOrAdd(
+                BuildSubscriptionKey(name, subscription),
                 s =>
-                {
+                    {
 #if DEBUG
 
-                    SSLValidator.OverrideValidation();
+                        SSLValidator.OverrideValidation();
 #endif
-                    if (!namespaceManager.SubscriptionExists(topicClient.Path, subscription))
-                    {
-                        var description = new SubscriptionDescription(topicClient.Path, subscription);
+                        if (!namespaceManager.SubscriptionExists(topicClient.Path, subscription))
+                        {
+                            var description = new SubscriptionDescription(topicClient.Path, subscription);
 
-                        logger.DebugWrite("Declared Subscription: '{0}' on Topic {1}", subscription, topicClient.Path);
-                        namespaceManager.CreateSubscription(description);
-                    }
+                            logger.DebugWrite(
+                                "Declared Subscription: '{0}' on Topic {1}",
+                                subscription,
+                                topicClient.Path);
+                            namespaceManager.CreateSubscription(description);
+                        }
 
-                    var client = messagingFactory.CreateSubscriptionClient(topicClient.Path, subscription);
-                    return client;
-                });
+                        var client = messagingFactory.CreateSubscriptionClient(
+                            topicClient.Path,
+                            subscription,
+                            receiveMode);
+                        return client;
+                    });
         }
 
         private static string BuildSubscriptionKey(string name, string subscription)
@@ -136,19 +154,39 @@
             return string.Format("{0}{1}", name, subscription);
         }
 
-        public TopicClient TopicDeclare(string name)
+        public TopicClient TopicFind(string name)
+        {
+            var topicClient = this.topics.GetOrAdd(
+                name,
+                n =>
+                {
+#if DEBUG
+                    SSLValidator.OverrideValidation();
+#endif
+                    if (!this.namespaceManager.TopicExists(n))
+                    {
+                        throw new InvalidOperationException(string.Format("Topic {0} was not found", n));
+                    }
+
+                    var client = this.messagingFactory.CreateTopicClient(n);
+                    return client;
+                });
+
+            return topicClient;
+        }
+
+        public TopicClient TopicDeclare(string name, bool requiresDuplicateDetection)
         {
             var topicClient = this.topics.GetOrAdd(
                 name,
                 n =>
                     {
 #if DEBUG
-
                         SSLValidator.OverrideValidation();
 #endif
                         if (!this.namespaceManager.TopicExists(n))
                         {
-                            var description = new TopicDescription(n);
+                            var description = new TopicDescription(n) { RequiresDuplicateDetection = requiresDuplicateDetection };
 
                             this.logger.DebugWrite("Declared Topic: '{0}'", n);
                             this.namespaceManager.CreateTopic(description);

@@ -1,5 +1,7 @@
 ﻿namespace AzureNetQ.FluentConfiguration
 {
+    using Microsoft.ServiceBus.Messaging;
+
     public interface ISubscriptionConfiguration
     {
         ISubscriptionConfiguration WithTopic(string topic);
@@ -7,6 +9,8 @@
         ISubscriptionConfiguration WithSubscription(string subscription);
 
         ISubscriptionConfiguration InReadAndDeleteMode();
+
+        ISubscriptionConfiguration WithDuplicateDetection();
     }
 
     public class SubscriptionConfiguration : ISubscriptionConfiguration
@@ -17,10 +21,13 @@
 
         public ReceiveMode ReceiveMode { get; private set; }
 
+        public bool RequiresDuplicateDetection { get; set; }
+
         public SubscriptionConfiguration()
         {
             this.Subscription = "Default";
             this.ReceiveMode = ReceiveMode.PeekLock;
+            this.RequiresDuplicateDetection = false;
         }
 
         public ISubscriptionConfiguration WithTopic(string topic)
@@ -38,6 +45,12 @@
         public ISubscriptionConfiguration InReadAndDeleteMode()
         {
             this.ReceiveMode = ReceiveMode.ReceiveAndDelete;
+            return this;
+        }
+
+        public ISubscriptionConfiguration WithDuplicateDetection()
+        {
+            this.RequiresDuplicateDetection = true;
             return this;
         }
     }

@@ -16,6 +16,8 @@ namespace AzureNetQ
         private readonly ISendReceive sendReceive;
         private readonly IAzureAdvancedBus advancedBus;
 
+        private readonly IConnectionConfiguration connectionConfiguration;
+
         public IAzureNetQLogger Logger
         {
             get { return logger; }
@@ -30,20 +32,23 @@ namespace AzureNetQ
             IAzureNetQLogger logger,
             IConventions conventions,
             IRpc rpc,
-            ISendReceive sendReceive, 
-            IAzureAdvancedBus advancedBus)
+            ISendReceive sendReceive,
+            IAzureAdvancedBus advancedBus,
+            IConnectionConfiguration connectionConfiguration)
         {
             Preconditions.CheckNotNull(logger, "logger");
             Preconditions.CheckNotNull(conventions, "conventions");
             Preconditions.CheckNotNull(rpc, "rpc");
             Preconditions.CheckNotNull(sendReceive, "sendReceive");
             Preconditions.CheckNotNull(advancedBus, "advancedBus");
+            Preconditions.CheckNotNull(connectionConfiguration, "connectionConfiguration");
 
             this.logger = logger;
             this.conventions = conventions;
             this.rpc = rpc;
             this.sendReceive = sendReceive;
             this.advancedBus = advancedBus;
+            this.connectionConfiguration = connectionConfiguration;
         }
 
         public void Publish<T>(T message) where T : class
@@ -53,46 +58,62 @@ namespace AzureNetQ
             PublishAsync(message).Wait();
         }
 
-        public void Publish<T>(T message, string topic) where T : class
+        public void Publish<T>(T message, Action<IPublishConfiguration> configure) where T : class
         {
             Preconditions.CheckNotNull(message, "message");
-            Preconditions.CheckNotNull(topic, "topic");
+            Preconditions.CheckNotNull(configure, "configure");
 
-            PublishAsync(message, topic).Wait();
+            PublishAsync(message, configure).Wait();
         }
 
-        public void Publish(Type type, object message, string topic = "")
+        public void Publish(Type type, object message, Action<IPublishConfiguration> configure)
         {
             Preconditions.CheckNotNull(message, "message");
-            Preconditions.CheckNotNull(topic, "topic");
+            Preconditions.CheckNotNull(configure, "topic");
 
-            PublishAsync(type, message, topic).Wait();
+            PublishAsync(type, message, configure).Wait();
         }
 
         public Task PublishAsync<T>(T message) where T : class
         {
             Preconditions.CheckNotNull(message, "message");
 
-            return PublishAsync(message, string.Empty);
+            return PublishAsync(message, x => { });
         }
 
-        public Task PublishAsync<T>(T message, string topic) where T : class
+        public Task PublishAsync<T>(T message, Action<IPublishConfiguration> configure) where T : class
         {
             Preconditions.CheckNotNull(message, "message");
-            Preconditions.CheckNotNull(topic, "topic");
+            Preconditions.CheckNotNull(configure, "configure");
 
-            return this.PublishAsync(typeof(T), message, topic);
+            return this.PublishAsync(typeof(T), message, configure);
         }
 
-        public Task PublishAsync(Type type, object message, string topic = "")
+        public Task PublishAsync(Type type, object message)
+        {
+            Preconditions.CheckNotNull(type, "type");
+            Preconditions.CheckNotNull(message, "message");
+
+            return this.PublishAsync(type, message, x => { });
+        }
+
+        public Task PublishAsync(Type type, object message, Action<IPublishConfiguration> configure)
         {
             Preconditions.CheckNotNull(message, "message");
-            Preconditions.CheckNotNull(topic, "topic");
-
+            Preconditions.CheckNotNull(configure, "configure");
+            
             var queueName = conventions.TopicNamingConvention(type);
-            var queue = advancedBus.TopicDeclare(queueName);
+            var queue = advancedBus.TopicFind(queueName);
+
+            var configuration = new PublishConfiguration();
+            configure(configuration);
 
             var azureNetQMessage = new BrokeredMessage(message);
+            if (!string.IsNullOrEmpty(configuration.MessageId))
+            {
+                azureNetQMessage.MessageId = configuration.MessageId;
+            }
+
             return queue.SendAsync(azureNetQMessage);
         }
 
@@ -138,11 +159,17 @@ namespace AzureNetQ
             configure(configuration);
 
             var topicName = conventions.TopicNamingConvention(typeof(T));
-            var subscriptionClient = advancedBus.SubscriptionDeclare(topicName, configuration.Subscription);
+            var subscriptionClient = advancedBus.SubscriptionDeclare(
+                topicName,
+                configuration.Subscription,
+                configuration.ReceiveMode,
+                configuration.RequiresDuplicateDetection);
 
-            subscriptionClient.OnMessageAsync(message => onMessage(message.GetBody<T>()));
+            subscriptionClient.OnMessageAsync(
+                message => onMessage(message.GetBody<T>()),
+                new OnMessageOptions { AutoComplete = true, MaxConcurrentCalls = connectionConfiguration.MaxConcurrentCalls });
         }
-
+        
         public TResponse Request<TRequest, TResponse>(TRequest request)
             where TRequest : class
             where TResponse : class
@@ -206,7 +233,7 @@ namespace AzureNetQ
         {
             return sendReceive.Receive(queue, addHandlers);
         }
-        
+
         public virtual void Dispose()
         {
             //throw new NotImplementedException();
