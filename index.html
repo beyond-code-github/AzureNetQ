@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>EasyNetQ - An easy .NET API for RabbitMQ</title>
+    <title>AzureNetQ - An easy .NET API for Microsoft Azure Service Bus &amp; Service Bus for Windows</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="EasyNetQ An easy to use .NET API for RabbitMQ">
+    <meta name="description" content="AzureNetQ An easy to use .NET API for Microsoft Azure Service Bus &amp; Service Bus for Windows">
     <meta name="author" content="Mike Hadlow">    
     <!-- Bootstrap -->
     <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
@@ -52,22 +52,22 @@
             <image src="design/logo_design_150.png" />
           </div>
           <div class="span9">
-            <h1>EasyNetQ</h1>
-            <h3>An easy .NET API for RabbitMQ</h3>
+            <h1>AzureNetQ</h1>
+            <h3>A port of <a href="https://github.com/mikehadlow/EasyNetQ">EasyNetQ</a> by <a href="https://github.com/mikehadlow">Mike Hadlow</a> .NET API for Microsoft Azure Service Bus &amp; Service Bus for Windows</h3>
           </div>
         </div>
 
         <div>&nbsp;</div>
 
-<!--         <h3 class="muted">EasyNetQ</h3> -->
         <div class="navbar">
           <div class="navbar-inner">
             <div class="container">
               <ul class="nav">
                 <li class="active"><a href="#"><i class="icon-home"></i> Home</a></li>
-                <li><a href="https://github.com/mikehadlow/EasyNetQ/wiki/Introduction"><i class="icon-align-justify"></i> Documentation</a></li>
-                <li><a href="https://groups.google.com/group/easynetq"><i class="icon-comment"></i> Group</a></li>
-                <li><a href="https://github.com/mikehadlow/EasyNetQ"><i class="icon-wrench"></i> GitHub</a></li>
+                <li><a href="https://github.com/roysvork/AzureNetQ/wiki/Introduction"><i class="icon-align-justify"></i> Documentation</a></li>
+                <li><a href="https://groups.google.com/group/easynetq"><i class="icon-comment"></i> Original EasyNetQ Group - Due to similarities in the API some information may still apply</a></li>
+                <li><a href="https://github.com/roysvork/AzureNetQ"><i class="icon-wrench"></i> GitHub</a></li>
+                <li><a href="https://github.com/mikehadlow/EasyNetQ"><i class="icon-wrench"></i> Original project - EasyNetQ on GitHub</a></li>
               </ul>
             </div>
           </div>
@@ -79,22 +79,10 @@
         <div class="span6">
           <h2>Easy</h2>
           <p>
-            EasyNetQ is the leading client API for RabbitMQ on .NET, with over 50,000 downloads on <a href="https://www.nuget.org/packages/EasyNetQ/">NuGet.org</a>. It is an open source project sponsored by <a href="http://15below.com/">15below</a> 
-            the travel industry experts. 
+            AzureNetQ is a client API for Microsoft Azure Service Bus &amp; Service Bus for Windows on .NET. You can find it as a <a href="https://www.nuget.org/packages/AzureNetQ/">NuGet package here</a>. It is an open source project maintained primarily by <a href="http://roysvork.wordpress.com">Pete Smith</a>
           </p>
         
-          <p>
-            Read <a href="http://blogs.vmware.com/vfabric/2012/12/net-rabbitmq-scales-to-100s-of-millions-of-passenger-messages-at-15below.html">
-            this VMWare whitepaper</a> describing how 15below dramatically simplified their
-            application architecture with EasyNetQ and RabbitMQ.
-          </p>
-          
-          <p>
-            Watch the author, Mike Hadlow, giving a  <a href="http://www.infoq.com/presentations/RabbitMQ-NET-EasyNetQ">demo of EasyNetQ at QCon London</a>.
-            And listen to Mike talking about EasyNetQ on <a href="http://www.dotnetrocks.com/default.aspx?ShowNum=848">Dot Net Rocks</a>.
-          </p> 
-
-          <p><a class="btn btn-info" href="https://github.com/mikehadlow/EasyNetQ/wiki/Quick-Start"><i class="icon-align-justify icon-white"></i> 10 Minute Quick Start Guide &raquo;</a></p>
+          <p><a class="btn btn-info" href="https://github.com/roysvork/AzureNetQ/wiki/Quick-Start"><i class="icon-align-justify icon-white"></i> 10 Minute Quick Start Guide &raquo;</a></p>
 
           <p>&nbsp;</p>
 
@@ -121,53 +109,30 @@ bus.Subscribe&lt;MyMessage&gt;("my_subscription_id", msg =&gt;
 
           <p>For more information, read the documentation:</a>
 
-          <p><a class="btn btn-info" href="https://github.com/mikehadlow/EasyNetQ/wiki/Introduction"><i class="icon-align-justify icon-white"></i> Documentation &raquo;</a></p>
+          <p><a class="btn btn-info" href="https://github.com/roysvork/AzureNetQ/wiki/Introduction"><i class="icon-align-justify icon-white"></i> Documentation &raquo;</a></p>
 
         </div>
 
         <div class="span6">
           <h2>Easy to install</h2>
 
-          <p>EasyNetQ is on NuGet. To install it, run the following command in the Package Manager Console</p>
+          <p>AzureNetQ is on NuGet. To install it, run the following command in the Package Manager Console</p>
 
           <pre><code>
-  PM> Install-Package EasyNetQ
+  PM> Install-Package AzureNetQ
           </code></pre>
 
-          <p><a class="btn btn-info" href="https://www.nuget.org/packages/EasyNetQ"><i class="icon-wrench icon-white"></i> NuGet &raquo;</a></p>
+          <p><a class="btn btn-info" href="https://www.nuget.org/packages/AzureNetQ"><i class="icon-wrench icon-white"></i> NuGet &raquo;</a></p>
 
           <p>&nbsp;</p>
           <h2>Open Source</h2>
 
           <p>
-            EasyNetQ is open source under the MIT licence. This means you can take the code and do what you like with it. Embed it in your commercial product without attribution,
+            AzureNetQ is open source under the MIT licence. This means you can take the code and do what you like with it. Embed it in your commercial product without attribution,
             or fork the code and release it under a new name.
           </p>
 
-          <p><a class="btn btn-info" href="https://github.com/mikehadlow/EasyNetQ"><i class="icon-wrench icon-white"></i> GitHub Project &raquo;</a></p>
-
-          <p>&nbsp;</p>
-          <h2>Easy to find out more</h2>
-
-          <p><a class="btn btn-info" href="https://groups.google.com/group/easynetq"><i class="icon-comment icon-white"></i> Discussion Group &raquo;</a></p>
-          <p><a class="btn btn-info" href="http://mikehadlow.blogspot.co.uk/search/label/EasyNetQ"><i class="icon-user icon-white"></i> Mike Hadlow's blog &raquo;</a></p>
-
-          <p>&nbsp;</p>
-          <h2>Management Client</h2>
-
-          <p>
-            The EasyNetQ project also includes a .NET client library for the RabbitMQ management API, <strong>EasyNetQ.Management.Client</strong>. 
-            Perfect for building management, monitoring and deployment tools.
-          </p>
-
-          <p>Install it with NuGet:</p>
-
-          <pre><code>
-  PM> Install-Package EasyNetQ.Management.Client
-          </code></pre>
-
-          <p><a class="btn btn-info" href="https://github.com/mikehadlow/EasyNetQ/wiki/Management-API-Introduction"><i class="icon-align-justify icon-white"></i> Management Client Documentation &raquo;</a></p>
-
+          <p><a class="btn btn-info" href="https://github.com/roysvork/AzureNetQ"><i class="icon-wrench icon-white"></i> GitHub Project &raquo;</a></p>
        </div>
 
       </div>
