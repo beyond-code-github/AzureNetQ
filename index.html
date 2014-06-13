@@ -112,7 +112,8 @@ bus.Publish(message);
 
           <pre><code>
 bus.Subscribe&lt;MyMessage&gt;(msg =&gt; 
-      Console.WriteLine(msg.Text), x =&gt; x.WithSubscription("my_subscription"));
+      Console.WriteLine(msg.Text), 
+      x =&gt; x.WithSubscription("my_subscription"));
           </code></pre> 
 
           <p>For more information, read the documentation:</a>
