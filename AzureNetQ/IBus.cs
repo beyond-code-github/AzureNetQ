@@ -25,6 +25,8 @@ namespace AzureNetQ
         /// <param name="topic">The topic string</param>
         void Publish<T>(T message, string topic) where T : class;
 
+        void Publish(Type type, object message, string topic = "");
+
         /// <summary>
         /// Publishes a message.
         /// When used with publisher confirms the task completes when the publish is confirmed.
@@ -45,6 +47,8 @@ namespace AzureNetQ
         /// <param name="topic">The topic string</param>
         /// <returns></returns>
         Task PublishAsync<T>(T message, string topic) where T : class;
+
+        Task PublishAsync(Type type, object message, string topic = "");
 
         /// <summary>
         /// Subscribes to a stream of messages that match a .NET type.

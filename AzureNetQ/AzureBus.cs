@@ -61,11 +61,19 @@ namespace AzureNetQ
             PublishAsync(message, topic).Wait();
         }
 
+        public void Publish(Type type, object message, string topic = "")
+        {
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
+
+            PublishAsync(type, message, topic).Wait();
+        }
+
         public Task PublishAsync<T>(T message) where T : class
         {
             Preconditions.CheckNotNull(message, "message");
 
-            return PublishAsync(message, conventions.TopicNamingConvention(typeof(T)));
+            return PublishAsync(message, string.Empty);
         }
 
         public Task PublishAsync<T>(T message, string topic) where T : class
@@ -73,6 +81,13 @@ namespace AzureNetQ
             Preconditions.CheckNotNull(message, "message");
             Preconditions.CheckNotNull(topic, "topic");
 
+            return this.PublishAsync(typeof(T), message, topic);
+        }
+
+        public Task PublishAsync(Type type, object message, string topic = "")
+        {
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
 
             var queueName = conventions.TopicNamingConvention(type);
             var queue = advancedBus.TopicDeclare(queueName);
