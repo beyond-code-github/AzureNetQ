@@ -2,13 +2,14 @@
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using AzureNetQ.Consumer;
-using AzureNetQ.Topology;
 
 namespace AzureNetQ.Producer
 {
+    using Microsoft.ServiceBus.Messaging;
+
     public class SendReceive : ISendReceive
     {
-        private readonly ConcurrentDictionary<string, IQueue> declaredQueues = new ConcurrentDictionary<string, IQueue>(); 
+        private readonly ConcurrentDictionary<string, QueueClient> declaredQueues = new ConcurrentDictionary<string, QueueClient>(); 
 
         public SendReceive()
         {

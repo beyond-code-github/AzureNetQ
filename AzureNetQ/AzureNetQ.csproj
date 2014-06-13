@@ -70,13 +70,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Version.cs">
-      <Link>Properties\Version.cs</Link>
-    </Compile>
     <Compile Include="AutoSubscribe\AutoSubscriber.cs" />
-    <Compile Include="AutoSubscribe\ForTopicAttribute.cs" />
     <Compile Include="AutoSubscribe\IConsumeAsync.cs" />
-    <Compile Include="AutoSubscribe\AutoSubscriberConsumerAttribute.cs" />
     <Compile Include="AzureAdvancedBus.cs" />
     <Compile Include="AzureBusFactory.cs" />
     <Compile Include="AzureNetQSettings.cs" />
@@ -100,10 +95,6 @@
     <Compile Include="IConnectionConfiguration.cs" />
     <Compile Include="IMessage.cs" />
     <Compile Include="AutoSubscribe\IAutoSubscriberMessageDispatcher.cs" />
-    <Compile Include="ISaga.cs" />
-    <Compile Include="ISerializer.cs" />
-    <Compile Include="IServiceProvider.cs" />
-    <Compile Include="JsonSerializer.cs" />
     <Compile Include="Loggers\ConsoleLogger.cs" />
     <Compile Include="Loggers\DelegateLogger.cs" />
     <Compile Include="Loggers\NullLogger.cs" />
@@ -117,8 +108,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AzureBus.cs" />
     <Compile Include="TaskHelpers.cs" />
-    <Compile Include="Topology\IQueue.cs" />
-    <Compile Include="Topology\Queue.cs" />
     <Compile Include="TypeNameSerializer.cs" />
     <Compile Include="Preconditions.cs" />
   </ItemGroup>

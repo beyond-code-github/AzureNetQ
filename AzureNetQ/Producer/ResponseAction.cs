@@ -1,13 +1,10 @@
 ﻿namespace AzureNetQ.Producer
 {
-    using System;
-
     using Microsoft.ServiceBus.Messaging;
+    using System;
 
     internal class ResponseAction
     {
         public Action<BrokeredMessage> OnSuccess { get; set; }
-
-        public Action OnFailure { get; set; }
     }
 }
