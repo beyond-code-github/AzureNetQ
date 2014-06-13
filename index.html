@@ -77,7 +77,7 @@
 
       <div class="row-fluid">
         <div class="span6">
-          <h2>Easy</h2>
+          <h2>Easy Azure</h2>
           <p>
             AzureNetQ is a client API for Microsoft Azure Service Bus &amp; Service Bus for Windows on .NET. You can find it as a <a href="https://www.nuget.org/packages/AzureNetQ/">NuGet package here</a>. </p>
           <p> Due to similarities in the API some information and documentation from EasyNetQ may still apply.</p>
@@ -94,9 +94,12 @@
           <h2>Easy to use</h2>
 
           <p>We designed EasyNetQ to be as simple as possible. Get started publishing and subscribing with RabbitMQ with just a few lines of code:</p>
-          <p>To connect to a RabbitMQ broker...</p>
+          <p>To connect to Service Bus...</p>
           <pre><code>
-var bus = RabbitHutch.CreateBus("host=localhost");
+&lt;add key="Microsoft.ServiceBus.ConnectionString" value="Endpoint=sb://servicebus/ServiceBusDefaultNamespace;StsEndpoint=https://servicebus:10355/ServiceBusDefaultNamespace;RuntimePort=10354;ManagementPort=10355" /&gt;
+          </code></pre>
+          <pre><code>
+var bus = AzureBusFactory.CreateBus();
           </code></pre>
 
           <p>To publish...</p>
@@ -108,8 +111,8 @@ bus.Publish(message);
           <p>To subscribe...</p>
 
           <pre><code>
-bus.Subscribe&lt;MyMessage&gt;("my_subscription_id", msg =&gt; 
-      Console.WriteLine(msg.Text));
+bus.Subscribe&lt;MyMessage&gt;(msg =&gt; 
+      Console.WriteLine(msg.Text), x =&gt; x.WithSubscription("my_subscription"));
           </code></pre> 
 
           <p>For more information, read the documentation:</a>
