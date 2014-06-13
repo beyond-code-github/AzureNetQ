@@ -1,21 +1,23 @@
-![AzureNetQ Logo](https://raw.github.com/wiki/mikehadlow/AzureNetQ/images/logo_design_150.png)
+![AzureNetQ Logo](https://raw.githubusercontent.com/Roysvork/AzureNetQ/gh-pages/design/logo_design_150.png)
+A Nice .NET API for Microsoft Azure Service Bus & Service Bus for Windows
 
-A Nice .NET API for RabbitMQ
-
-Development is sponsored by travel industry experts [15below](http://15below.com/)
-
-* **[Homepage](http://easynetq.com)**
-* **[Documentation](https://github.com/mikehadlow/AzureNetQ/wiki/Introduction)**
+* **[Homepage](http://roysvork.github.io/AzureNetQ)**
+* **[Documentation](https://github.com/roysvork/AzureNetQ/wiki/Introduction)**
 * **[NuGet](http://nuget.org/List/Packages/AzureNetQ)**
-* **[Discussion Group](https://groups.google.com/group/easynetq)**
+
+* **[EasyNetQ Project](http://github.com/mikehadlow/EasyNetQ)**
+* **[EasyNetQ Discussion Group](https://groups.google.com/group/easynetq)**
 
 Goals:
 
-1. To make working with RabbitMQ on .NET as easy as possible.
+1. To make working with Microsoft Service Bus on .NET as easy as possible.
+2. To build an API that is close to interchangable with EasyNetQ.
 
-To connect to a RabbitMQ broker...
+To connect to Service Bus...
 
-    var bus = RabbitHutch.CreateBus("host=localhost");
+    <add key="Microsoft.ServiceBus.ConnectionString" value="Endpoint=sb://servicebus/ServiceBusDefaultNamespace;StsEndpoint=https://servicebus:10355/ServiceBusDefaultNamespace;RuntimePort=10354;ManagementPort=10355" />
+
+    var bus = AzureBusFactory.CreateBus();
 
 To publish a message...
 
@@ -23,7 +25,9 @@ To publish a message...
 
 To subscribe to a message...
 
-	bus.Subscribe<MyMessage>("my_subscription_id", msg => Console.WriteLine(msg.Text));
+	bus.Subscribe<MyMessage>(
+		msg => Console.WriteLine(msg.Text),
+		x => x.WithSubscription("my_subscription_id"));
 
 Remote procedure call...
 
@@ -37,26 +41,12 @@ RPC server...
 		new TestResponseMessage{ Text = request.Text + " all done!" });
 	
 
-## Management API
-
-AzureNetQ also has a client-side library for the RabbitMQ Management HTTP API. This lets you control all aspects for your
-RabbitMQ broker from .NET code, including creating virtual hosts and users; setting permissions; monitoring queues, 
-connections and channels; and setting up exchanges, queues and bindings. 
-
-See the **[documentation](https://github.com/mikehadlow/AzureNetQ/wiki/Management-API-Introduction)**.
-
-The annoucement blog post is [here](http://mikehadlow.blogspot.co.uk/2012/11/a-c-net-client-proxy-for-rabbitmq.html)
-
-## Some blog posts about AzureNetQ ...
-
-http://mikehadlow.blogspot.co.uk/search/label/AzureNetQ
-
 ## Getting started
 
-Just open AzureNetQ.sln in VisualStudio 2010 and build.
+Just open AzureNetQ.sln in VisualStudio 2013 and build.
 
-All the required dependencies for the solution file to build the software are included. To run the explicit tests that send messages you will have to be running the AzureNetQ.Tests.SimpleService application and have a working local RabbitMQ server (see http://www.rabbitmq.com/ for more details).
+All the required dependencies for the solution file to build the software are included. To run the explicit tests that send messages you will have to be running the AzureNetQ.Tests.SimpleService application and have a working Service Bus for Windows install (Blog post coming)
 
 ## Mono specific
 
-If you are building the software in monodevelop under Linux you will have to change the active solution configuration to 'Debug|Mixed platforms' to build all the included projects and set the 'Copy to output directory' property on  the app.config files to something other then 'Do not copy'. Most of the example programs will not run since they utilise the TopShelf assembly to run as a windows service. The basic tests and Tests.SimpleServer seem to behave correctly.
+Unlike EasyNetQ, AzureNetQ has not yet been tested on Mono. If you would like to help with this, please get in touch with @roysvork on twitter!
