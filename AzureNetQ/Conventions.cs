@@ -42,7 +42,11 @@ namespace AzureNetQ
 		    Preconditions.CheckNotNull(typeNameSerializer, "typeNameSerializer");
 
 		    // Establish default conventions.
-			TopicNamingConvention = messageType => "";
+			TopicNamingConvention = (messageType) =>
+			    {
+                    var typeName = typeNameSerializer.Serialize(messageType);
+                    return string.Format("Topic_{0}", typeName);
+			    };
 			RpcRoutingKeyNamingConvention = typeNameSerializer.Serialize;
             ErrorQueueNamingConvention = () => "AzureNetQ_Default_Error_Queue";
 		    RpcReturnQueueNamingConvention = () => "azurenetq.response." + Guid.NewGuid().ToString();

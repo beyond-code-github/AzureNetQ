@@ -74,8 +74,8 @@ namespace AzureNetQ
             Preconditions.CheckNotNull(topic, "topic");
 
 
-            var queueName = conventions.QueueNamingConvention(typeof(T));
-            var queue = advancedBus.QueueDeclare(queueName);
+            var queueName = conventions.TopicNamingConvention(type);
+            var queue = advancedBus.TopicDeclare(queueName);
 
             var azureNetQMessage = new BrokeredMessage(message);
             return queue.SendAsync(azureNetQMessage);
@@ -122,10 +122,10 @@ namespace AzureNetQ
             var configuration = new SubscriptionConfiguration();
             configure(configuration);
 
-            var queueName = conventions.QueueNamingConvention(typeof(T));
-            var queue = advancedBus.QueueDeclare(queueName);
+            var topicName = conventions.TopicNamingConvention(typeof(T));
+            var subscriptionClient = advancedBus.SubscriptionDeclare(topicName, configuration.Subscription);
 
-            queue.OnMessageAsync(message => onMessage(message.GetBody<T>()));
+            subscriptionClient.OnMessageAsync(message => onMessage(message.GetBody<T>()));
         }
 
         public TResponse Request<TRequest, TResponse>(TRequest request)
