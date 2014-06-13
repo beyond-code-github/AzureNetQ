@@ -71,6 +71,7 @@
     <Compile Include="AutoSubscribe\IRespondAsync.cs" />
     <Compile Include="AutoSubscribe\IRespond.cs" />
     <Compile Include="AutoSubscribe\IConsumeAsync.cs" />
+    <Compile Include="AutoSubscribe\ReadAndDeleteAttribute.cs" />
     <Compile Include="AutoSubscribe\SubscriptionAttribute.cs" />
     <Compile Include="AzureAdvancedBus.cs" />
     <Compile Include="AzureBusFactory.cs" />

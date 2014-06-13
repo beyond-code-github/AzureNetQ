@@ -5,6 +5,8 @@
         ISubscriptionConfiguration WithTopic(string topic);
 
         ISubscriptionConfiguration WithSubscription(string subscription);
+
+        ISubscriptionConfiguration InReadAndDeleteMode();
     }
 
     public class SubscriptionConfiguration : ISubscriptionConfiguration
@@ -13,9 +15,12 @@
 
         public string Subscription { get; private set; }
 
+        public ReceiveMode ReceiveMode { get; private set; }
+
         public SubscriptionConfiguration()
         {
             this.Subscription = "Default";
+            this.ReceiveMode = ReceiveMode.PeekLock;
         }
 
         public ISubscriptionConfiguration WithTopic(string topic)
@@ -27,6 +32,12 @@
         public ISubscriptionConfiguration WithSubscription(string subscription)
         {
             this.Subscription = subscription;
+            return this;
+        }
+
+        public ISubscriptionConfiguration InReadAndDeleteMode()
+        {
+            this.ReceiveMode = ReceiveMode.ReceiveAndDelete;
             return this;
         }
     }

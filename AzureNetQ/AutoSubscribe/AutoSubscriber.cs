@@ -106,13 +106,19 @@ namespace AzureNetQ.AutoSubscribe
                                                            .MakeGenericMethod(subscriptionInfo.MessageType, subscriptionInfo.ConcreteType);
 
                     var configuration = new Action<ISubscriptionConfiguration>(c => { });
+                    
                     var subscriptionAttribute = GetSubscriptionAttribute(subscriptionInfo);
-
                     if (subscriptionAttribute != null)
                     {
                         configuration = c => c.WithSubscription(subscriptionAttribute.Name);
                     }
-                    
+
+                    var readAndDeleteAttribute = this.GetReadAndDeleteAttribute(subscriptionInfo);
+                    if (readAndDeleteAttribute != null)
+                    {
+                        configuration = c => c.InReadAndDeleteMode();
+                    }
+
                     var dispatchDelegate = Delegate.CreateDelegate(subscriberTypeFromMessageTypeDelegate(subscriptionInfo.MessageType), AutoSubscriberMessageDispatcher, dispatchMethod);
                     var busSubscribeMethod = genericBusSubscribeMethod.MakeGenericMethod(subscriptionInfo.MessageType);
 
@@ -125,6 +131,12 @@ namespace AzureNetQ.AutoSubscribe
         {
             var consumeMethod = ConsumeMethod(subscriptionInfo);
             return consumeMethod.GetCustomAttributes(typeof(SubscriptionAttribute), true).SingleOrDefault() as SubscriptionAttribute;
+        }
+
+        protected virtual ReceiveAndDeleteAttribute GetReadAndDeleteAttribute(AutoSubscriberConsumerInfo subscriptionInfo)
+        {
+            var consumeMethod = ConsumeMethod(subscriptionInfo);
+            return consumeMethod.GetCustomAttributes(typeof(ReceiveAndDeleteAttribute), true).SingleOrDefault() as ReceiveAndDeleteAttribute;
         }
 
         private MethodInfo ConsumeMethod(AutoSubscriberConsumerInfo consumerInfo)
