@@ -23,7 +23,7 @@
         private readonly ConcurrentDictionary<string, ResponseAction> responseActions = new ConcurrentDictionary<string, ResponseAction>();
 
         private readonly TimeSpan disablePeriodicSignaling = TimeSpan.FromMilliseconds(-1);
-        
+
         private const string ReplyToKey = "ReplyTo";
 
         private const string IsFaultedKey = "IsFaulted";
@@ -58,17 +58,36 @@
             });
 
             timer.Change(TimeSpan.FromSeconds(configuration.Timeout), disablePeriodicSignaling);
-            
+
             responseActions.TryAdd(
                 correlationId.ToString(),
                 new ResponseAction
                     {
-                        OnSuccess = message => tcs.TrySetResult(message.GetBody<TResponse>()),
-                        OnFailure = () =>
-                            tcs.TrySetException(
-                                new AzureNetQException(
-                                "Connection lost while request was in-flight. CorrelationId: {0}",
-                                correlationId.ToString()))
+                        OnSuccess = message =>
+                            {
+                                timer.Dispose();
+                                var isFaulted = false;
+                                var exceptionMessage = "The exception message has not been specified.";
+
+                                if (message.Properties.ContainsKey(IsFaultedKey))
+                                {
+                                    isFaulted = Convert.ToBoolean(message.Properties[IsFaultedKey]);
+                                }
+
+                                if (message.Properties.ContainsKey(ExceptionMessageKey))
+                                {
+                                    exceptionMessage = message.Properties[ExceptionMessageKey].ToString();
+                                }
+                                
+                                if (isFaulted)
+                                {
+                                    tcs.TrySetException(new AzureNetQResponderException(exceptionMessage));
+                                }
+                                else
+                                {
+                                    tcs.TrySetResult(message.GetBody<TResponse>());
+                                }
+                            }
                     });
 
             var queueName = SubscribeToResponse<TRequest, TResponse>();
@@ -130,46 +149,41 @@
 
             queue.OnMessageAsync(
                 requestMessage =>
-                    {
-                        var tcs = new TaskCompletionSource<object>();
+                {
+                    var tcs = new TaskCompletionSource<object>();
 
-                        responder(requestMessage.GetBody<TRequest>()).ContinueWith(
-                            task =>
+                    responder(requestMessage.GetBody<TRequest>()).ContinueWith(
+                        task =>
+                        {
+                            var responseQueue =
+                                advancedBus.QueueDeclare(requestMessage.Properties[ReplyToKey] as string);
+                            if (task.IsFaulted)
+                            {
+                                if (task.Exception != null)
                                 {
-                                    var responseQueue =
-                                        advancedBus.QueueDeclare(requestMessage.Properties[ReplyToKey] as string);
-                                    if (task.IsFaulted)
-                                    {
-                                        if (task.Exception != null)
-                                        {
-                                            var body = Activator.CreateInstance<TResponse>();
-                                            var responseMessage = new BrokeredMessage(body);
-                                            responseMessage.Properties.Add(IsFaultedKey, true);
-                                            responseMessage.Properties.Add(
-                                                ExceptionMessageKey,
-                                                task.Exception.InnerException.Message);
-                                            responseMessage.CorrelationId = requestMessage.CorrelationId;
+                                    var body = Activator.CreateInstance<TResponse>();
+                                    var responseMessage = new BrokeredMessage(body);
+                                    responseMessage.Properties.Add(IsFaultedKey, true);
+                                    responseMessage.Properties.Add(
+                                        ExceptionMessageKey,
+                                        task.Exception.InnerException.Message);
+                                    responseMessage.CorrelationId = requestMessage.CorrelationId;
+                                    responseQueue.SendAsync(responseMessage);
 
-                                            responseQueue.SendAsync(responseMessage);
-                                            tcs.SetException(task.Exception);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        var responseMessage = new BrokeredMessage(task.Result)
-                                                                  {
-                                                                      CorrelationId =
-                                                                          requestMessage
-                                                                          .CorrelationId
-                                                                  };
+                                    // Set the result to null and don't indicate fault otherwise this message will be retried by service bus
+                                    tcs.SetResult(null);
+                                }
+                            }
+                            else
+                            {
+                                var responseMessage = new BrokeredMessage(task.Result) { CorrelationId = requestMessage.CorrelationId };
+                                responseQueue.SendAsync(responseMessage);
+                                tcs.SetResult(null);
+                            }
+                        });
 
-                                        responseQueue.SendAsync(responseMessage);
-                                        tcs.SetResult(null);
-                                    }
-                                });
-
-                        return tcs.Task;
-                    },
+                    return tcs.Task;
+                },
                 new OnMessageOptions { AutoComplete = true, MaxConcurrentCalls = configuration.MaxConcurrentCalls });
 
             return null;
