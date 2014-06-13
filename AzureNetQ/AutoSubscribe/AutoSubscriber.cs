@@ -2,13 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
-using AzureNetQ.FluentConfiguration;
 
 namespace AzureNetQ.AutoSubscribe
 {
+    using AzureNetQ.FluentConfiguration;
+
     /// <summary>
     /// Lets you scan assemblies for implementations of <see cref="IConsume{T}"/> so that
     /// these will get registrered as subscribers in the bus.
@@ -18,86 +17,81 @@ namespace AzureNetQ.AutoSubscribe
         protected const string ConsumeMethodName = "Consume";
         protected const string DispatchMethodName = "Dispatch";
         protected const string DispatchAsyncMethodName = "DispatchAsync";
+        protected const string HandleMethodName = "Handle";
+        protected const string HandleAsyncMethodName = "HandleAsync";
         protected readonly IBus bus;
-
-        /// <summary>
-        /// Used when generating the unique SubscriptionId checksum.
-        /// </summary>
-        public string SubscriptionIdPrefix { get; private set; }
-
+        
         /// <summary>
         /// Responsible for consuming a message with the relevant message consumer.
         /// </summary>
         public IAutoSubscriberMessageDispatcher AutoSubscriberMessageDispatcher { get; set; } 
 
-        /// <summary>
-        /// Responsible for generating SubscriptionIds, when you use
-        /// <see cref="IConsume{T}"/>, since it does not let you specify
-        /// specific SubscriptionIds.
-        /// Message type and SubscriptionId is the key; which if two
-        /// equal keys exists, you will get round robin consumption of
-        /// messages.
-        /// </summary>
-        public Func<AutoSubscriberConsumerInfo, string> GenerateSubscriptionId { protected get; set; }
-
-        public AutoSubscriber(IBus bus, string subscriptionIdPrefix)
+        public AutoSubscriber(IBus bus)
         {
             Preconditions.CheckNotNull(bus, "bus");
-            Preconditions.CheckNotBlank(subscriptionIdPrefix, "subscriptionIdPrefix", "You need to specify a SubscriptionId prefix, which will be used as part of the checksum of all generated subscription ids.");
-
+           
             this.bus = bus;
-            SubscriptionIdPrefix = subscriptionIdPrefix;
             AutoSubscriberMessageDispatcher = new DefaultAutoSubscriberMessageDispatcher();
-            GenerateSubscriptionId = DefaultSubscriptionIdGenerator;
         }
-
-        protected virtual string DefaultSubscriptionIdGenerator(AutoSubscriberConsumerInfo c)
-        {
-            var r = new StringBuilder();
-            var unique = string.Concat(SubscriptionIdPrefix, ":", c.ConcreteType.FullName, ":", c.MessageType.FullName);
-
-            using (var md5 = MD5.Create())
-            {
-                var buff = md5.ComputeHash(Encoding.UTF8.GetBytes(unique));
-                foreach (var b in buff)
-                    r.Append(b.ToString("x2"));
-            }
-
-            return string.Concat(SubscriptionIdPrefix, ":", r.ToString());
-        }
-
+        
         /// <summary>
         /// Registers all consumers in passed assembly. The actual Subscriber instances is
-        /// created using <seealso cref="AutoSubscriberMessageDispatcher"/>. The SubscriptionId per consumer
-        /// method is determined by <seealso cref="GenerateSubscriptionId"/> or if the method
-        /// is marked with <see cref="AutoSubscriberConsumerAttribute"/> with a custom SubscriptionId.
+        /// created using <seealso cref="AutoSubscriberMessageDispatcher"/>.
         /// </summary>
         /// <param name="assemblies">The assembleis to scan for consumers.</param>
         public virtual void Subscribe(params Assembly[] assemblies)
         {
             Preconditions.CheckAny(assemblies, "assemblies", "No assemblies specified.");
 
-            var genericBusSubscribeMethod = GetSubscribeMethodOfBus("Subscribe",typeof(Action<>));
-            var subscriptionInfos = GetSubscriptionInfos(assemblies.SelectMany(a => a.GetTypes()), typeof(IConsume<>));
+            var genericBusSubscribeMethod = this.GetSubscribeMethodOfBus("Subscribe", typeof(Action<>));
+            var subscriptionInfos = this.GetConsumerInfos(assemblies.SelectMany(a => a.GetTypes()), typeof(IConsume<>));
+            
+            InvokeMethods(
+                subscriptionInfos,
+                DispatchMethodName,
+                genericBusSubscribeMethod,
+                messageType => typeof(Action<>).MakeGenericType(messageType));
 
-            InvokeMethods(subscriptionInfos,DispatchMethodName, genericBusSubscribeMethod, messageType => typeof(Action<>).MakeGenericType(messageType));
+            var genericBusRespondMethod = this.GetRespondMethodOfBus("Respond", typeof(Func<,>));
+            var responderInfos = this.GetResponderInfos(assemblies.SelectMany(a => a.GetTypes()), typeof(IRespond<,>));
+            
+            InvokeMethods(
+                responderInfos,
+                HandleMethodName,
+                genericBusRespondMethod,
+                (messageType, responseType) => typeof(Func<,>).MakeGenericType(messageType, responseType));
+
         }
-
+        
         /// <summary>
         /// Registers all async consumers in passed assembly. The actual Subscriber instances is
-        /// created using <seealso cref="AutoSubscriberMessageDispatcher"/>. The SubscriptionId per consumer
-        /// method is determined by <seealso cref="GenerateSubscriptionId"/> or if the method
-        /// is marked with <see cref="AutoSubscriberConsumerAttribute"/> with a custom SubscriptionId.
+        /// created using <seealso cref="AutoSubscriberMessageDispatcher"/>.
         /// </summary>
         /// <param name="assemblies">The assembleis to scan for consumers.</param>
         public virtual void SubscribeAsync(params Assembly[] assemblies)
         {
             Preconditions.CheckAny(assemblies, "assemblies", "No assemblies specified.");
 
-            var genericBusSubscribeMethod = GetSubscribeMethodOfBus("SubscribeAsync", typeof(Func<,>));
-            var subscriptionInfos = GetSubscriptionInfos(assemblies.SelectMany(a => a.GetTypes()), typeof(IConsumeAsync<>));
+            var genericBusSubscribeMethod = this.GetSubscribeMethodOfBus("SubscribeAsync", typeof(Func<,>));
+            var consumerInfos = this.GetConsumerInfos(assemblies.SelectMany(a => a.GetTypes()), typeof(IConsumeAsync<>));
             Func<Type,Type> subscriberTypeFromMessageTypeDelegate = messageType => typeof (Func<,>).MakeGenericType(messageType, typeof (Task));
-            InvokeMethods(subscriptionInfos, DispatchAsyncMethodName, genericBusSubscribeMethod, subscriberTypeFromMessageTypeDelegate);
+            
+            InvokeMethods(
+                consumerInfos,
+                DispatchAsyncMethodName,
+                genericBusSubscribeMethod,
+                subscriberTypeFromMessageTypeDelegate);
+
+            var genericBusRespondMethod = this.GetRespondMethodOfBus("RespondAsync", typeof(Func<,>));
+            var responderInfos = this.GetResponderInfos(assemblies.SelectMany(a => a.GetTypes()), typeof(IRespondAsync<,>));
+            Func<Type, Type, Type> subscriberTypeFromMessageAndResponseTypeDelegate =
+                (messageType, responseType) => typeof(Func<,>).MakeGenericType(messageType, typeof(Task<>).MakeGenericType(responseType));
+
+            InvokeMethods(
+               responderInfos,
+               HandleAsyncMethodName,
+               genericBusRespondMethod,
+               subscriberTypeFromMessageAndResponseTypeDelegate);
         }
 
         protected void InvokeMethods(IEnumerable<KeyValuePair<Type, AutoSubscriberConsumerInfo[]>> subscriptionInfos, string dispatchName, MethodInfo genericBusSubscribeMethod, Func<Type, Type> subscriberTypeFromMessageTypeDelegate)
@@ -111,69 +105,26 @@ namespace AzureNetQ.AutoSubscribe
                                                            .GetMethod(dispatchName, BindingFlags.Instance | BindingFlags.Public)
                                                            .MakeGenericMethod(subscriptionInfo.MessageType, subscriptionInfo.ConcreteType);
 
-                    var dispatchDelegate = Delegate.CreateDelegate(subscriberTypeFromMessageTypeDelegate(subscriptionInfo.MessageType), AutoSubscriberMessageDispatcher, dispatchMethod);
+                    var configuration = new Action<ISubscriptionConfiguration>(c => { });
                     var subscriptionAttribute = GetSubscriptionAttribute(subscriptionInfo);
-                    var subscriptionId = subscriptionAttribute != null ? subscriptionAttribute.SubscriptionId : GenerateSubscriptionId(subscriptionInfo);
+
+                    if (subscriptionAttribute != null)
+                    {
+                        configuration = c => c.WithSubscription(subscriptionAttribute.Name);
+                    }
+                    
+                    var dispatchDelegate = Delegate.CreateDelegate(subscriberTypeFromMessageTypeDelegate(subscriptionInfo.MessageType), AutoSubscriberMessageDispatcher, dispatchMethod);
                     var busSubscribeMethod = genericBusSubscribeMethod.MakeGenericMethod(subscriptionInfo.MessageType);
-                    Action<ISubscriptionConfiguration> topicInfo = TopicInfo(subscriptionInfo);
-                    busSubscribeMethod.Invoke(bus, new object[] {subscriptionId, dispatchDelegate, topicInfo});
+
+                    busSubscribeMethod.Invoke(bus, new object[] { dispatchDelegate, configuration });
                 }
             }
         }
 
-        private Action<ISubscriptionConfiguration> TopicInfo(AutoSubscriberConsumerInfo subscriptionInfo)
-        {
-            var topics = GetTopAttributeValues(subscriptionInfo);
-            if (topics.Count() != 0)
-            {
-                return GenerateConfigurationFromTopics(topics);
-            }
-            return configuration => configuration.WithTopic("#");
-        }
-
-        private Action<ISubscriptionConfiguration> GenerateConfigurationFromTopics(IEnumerable<string> topics)
-        {
-            return configuration =>
-                {
-                    foreach (var topic in topics)
-                    {
-                        configuration.WithTopic(topic);
-                    }
-                };
-        }
-
-        private IEnumerable<string> GetTopAttributeValues(AutoSubscriberConsumerInfo subscriptionInfo)
+        protected virtual SubscriptionAttribute GetSubscriptionAttribute(AutoSubscriberConsumerInfo subscriptionInfo)
         {
             var consumeMethod = ConsumeMethod(subscriptionInfo);
-            object[] customAttributes = consumeMethod.GetCustomAttributes(typeof(ForTopicAttribute), true);
-            return customAttributes
-                             .OfType<ForTopicAttribute>()
-                             .Select(a => a.Topic);
-        }
-
-
-        protected virtual bool IsValidMarkerType(Type markerType)
-        {
-            return markerType.IsInterface && markerType.GetMethods().Any(m => m.Name == ConsumeMethodName);
-        }
-
-        protected virtual MethodInfo GetSubscribeMethodOfBus(string methodName, Type parmType)
-        {
-            return bus.GetType().GetMethods()
-                .Where(m => m.Name == methodName)
-                .Select(m => new { Method = m, Params = m.GetParameters() })
-                .Single(m => m.Params.Length == 3
-                    && m.Params[0].ParameterType == typeof(string)
-                    && m.Params[1].ParameterType.GetGenericTypeDefinition() == parmType
-                    && m.Params[2].ParameterType == typeof(Action<ISubscriptionConfiguration>)
-                   ).Method;
-        }
-
-        protected virtual AutoSubscriberConsumerAttribute GetSubscriptionAttribute(AutoSubscriberConsumerInfo consumerInfo)
-        {
-            var consumeMethod = ConsumeMethod(consumerInfo);
-
-            return consumeMethod.GetCustomAttributes(typeof(AutoSubscriberConsumerAttribute), true).SingleOrDefault() as AutoSubscriberConsumerAttribute;
+            return consumeMethod.GetCustomAttributes(typeof(SubscriptionAttribute), true).SingleOrDefault() as SubscriptionAttribute;
         }
 
         private MethodInfo ConsumeMethod(AutoSubscriberConsumerInfo consumerInfo)
@@ -184,11 +135,56 @@ namespace AzureNetQ.AutoSubscribe
 
         private MethodInfo GetExplicitlyDeclaredInterfaceMethod(Type messageType)
         {
-            var interfaceType = typeof (IConsume<>).MakeGenericType(messageType);
+            var interfaceType = typeof(IConsume<>).MakeGenericType(messageType);
             return interfaceType.GetMethod(ConsumeMethodName);
         }
 
-        protected virtual IEnumerable<KeyValuePair<Type, AutoSubscriberConsumerInfo[]>> GetSubscriptionInfos(IEnumerable<Type> types,Type interfaceType)
+        protected void InvokeMethods(IEnumerable<KeyValuePair<Type, AutoSubscriberResponderInfo[]>> subscriptionInfos, string handlerName, MethodInfo genericBusRespondMethod, Func<Type, Type, Type> subscriberTypeFromMessageTypeDelegate)
+        {
+            foreach (var kv in subscriptionInfos)
+            {
+                foreach (var subscriptionInfo in kv.Value)
+                {
+                    var handleMethod =
+                            AutoSubscriberMessageDispatcher.GetType()
+                                                           .GetMethod(handlerName, BindingFlags.Instance | BindingFlags.Public)
+                                                           .MakeGenericMethod(subscriptionInfo.MessageType, subscriptionInfo.ResponseType, subscriptionInfo.ConcreteType);
+
+                    var handleDelegate = Delegate.CreateDelegate(subscriberTypeFromMessageTypeDelegate(subscriptionInfo.MessageType, subscriptionInfo.ResponseType), AutoSubscriberMessageDispatcher, handleMethod);
+                    var busRespondMethod = genericBusRespondMethod.MakeGenericMethod(subscriptionInfo.MessageType, subscriptionInfo.ResponseType);
+
+                    busRespondMethod.Invoke(bus, new object[] { handleDelegate });
+                }
+            }
+        }
+        
+        protected virtual bool IsValidMarkerType(Type markerType)
+        {
+            return markerType.IsInterface && markerType.GetMethods().Any(m => m.Name == ConsumeMethodName);
+        }
+
+        protected virtual MethodInfo GetSubscribeMethodOfBus(string method, Type paramType)
+        {
+            return bus.GetType().GetMethods()
+                .Where(m => m.Name == method)
+                .Select(m => new { Method = m, Params = m.GetParameters() })
+                .Single(m => m.Params.Length == 2
+                    && m.Params[0].ParameterType.GetGenericTypeDefinition() == paramType
+                    && m.Params[1].ParameterType == typeof(Action<ISubscriptionConfiguration>)
+                   ).Method;
+        }
+
+        protected virtual MethodInfo GetRespondMethodOfBus(string method, Type paramType)
+        {
+            return bus.GetType().GetMethods()
+                .Where(m => m.Name == method)
+                .Select(m => new { Method = m, Params = m.GetParameters() })
+                .Single(m => m.Params.Length == 1
+                    && m.Params[0].ParameterType.GetGenericTypeDefinition() == paramType
+                   ).Method;
+        }
+        
+        protected virtual IEnumerable<KeyValuePair<Type, AutoSubscriberConsumerInfo[]>> GetConsumerInfos(IEnumerable<Type> types,Type interfaceType)
         {
             foreach (var concreteType in types.Where(t => t.IsClass))
             {
@@ -202,6 +198,18 @@ namespace AzureNetQ.AutoSubscribe
             }
         }
 
-       
+        protected virtual IEnumerable<KeyValuePair<Type, AutoSubscriberResponderInfo[]>> GetResponderInfos(IEnumerable<Type> types, Type interfaceType)
+        {
+            foreach (var concreteType in types.Where(t => t.IsClass))
+            {
+                var subscriptionInfos = concreteType.GetInterfaces()
+                    .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType)
+                    .Select(i => new AutoSubscriberResponderInfo(concreteType, i, i.GetGenericArguments()[0], i.GetGenericArguments()[1]))
+                    .ToArray();
+
+                if (subscriptionInfos.Any())
+                    yield return new KeyValuePair<Type, AutoSubscriberResponderInfo[]>(concreteType, subscriptionInfos);
+            }
+        }
     }
 }

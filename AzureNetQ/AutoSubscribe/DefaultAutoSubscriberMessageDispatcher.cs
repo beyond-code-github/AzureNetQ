@@ -22,5 +22,21 @@ namespace AzureNetQ.AutoSubscribe
 
             return consumer.Consume(message);
         }
+
+        public TResponse Handle<TMessage, TResponse, TResponder>(TMessage message)
+            where TMessage : class
+            where TResponder : IRespond<TMessage, TResponse>
+        {
+            var responder = (IRespond<TMessage, TResponse>)Activator.CreateInstance(typeof(TResponder));
+            return responder.Respond(message);
+        }
+
+        public Task<TResponse> HandleAsync<TMessage, TResponse, TResponder>(TMessage message)
+            where TMessage : class
+            where TResponder : IRespondAsync<TMessage, TResponse>
+        {
+            var responder = (IRespondAsync<TMessage, TResponse>)Activator.CreateInstance(typeof(TResponder));
+            return responder.Respond(message);
+        }
     }
 }

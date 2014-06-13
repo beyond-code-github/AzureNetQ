@@ -1,7 +1,7 @@
-using System;
-
 namespace AzureNetQ.AutoSubscribe
 {
+    using System;
+
     [Serializable]
     public class AutoSubscriberConsumerInfo
     {
