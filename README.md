@@ -5,7 +5,6 @@ A Nice .NET API for Microsoft Azure Service Bus & Service Bus for Windows
 * **[Homepage](http://roysvork.github.io/AzureNetQ)**
 * **[Documentation](https://github.com/roysvork/AzureNetQ/wiki/Introduction)**
 * **[NuGet](http://nuget.org/List/Packages/AzureNetQ)**
-
 * **[EasyNetQ Project](http://github.com/mikehadlow/EasyNetQ)**
 * **[EasyNetQ Discussion Group](https://groups.google.com/group/easynetq)**
 
