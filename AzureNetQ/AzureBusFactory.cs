@@ -23,15 +23,16 @@
 
         public static IBus CreateBus(string connectionString, AzureNetQSettings settings)
         {
-            settings.SetConnectionString(connectionString);
+            var configuration = settings.ConnectionConfiguration();
+            configuration.ConnectionString = connectionString;
 
             return new AzureBus(
                 settings.Logger(),
                 settings.Conventions(),
                 settings.Rpc(),
                 settings.SendAndReceive(),
-                settings.AzureAdvancedBus.Value,
-                settings.ConnectionConfiguration());
+                settings.AzureAdvancedBus.Value, 
+                configuration);
         }
     }
 }

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <metadata> 
-    <version>0.1.1</version>
+    <version>0.1.1.1</version>
     <authors>Roysvork</authors>
     <owners>Roysvork</owners>
     <id>AzureNetQ</id>
@@ -9,6 +9,8 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>AzureNetQ is a client API for Microsoft Azure Service Bus &amp; Service Bus for Windows on .NET</description>
     <copyright>Pete Smith 2014</copyright>
+    <projectUrl>http://roysvork.github.io/AzureNetQ</projectUrl>
+    <licenseUrl>https://github.com/roysvork/AzureNetQ/blob/master/licence.txt</licenseUrl>
     <dependencies>
         <dependency id="ServiceBus.v1_1" version="1.0.3" />
     </dependencies>
