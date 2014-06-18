@@ -11,6 +11,8 @@
         int MaxConcurrentCalls { get; set; }
 
         TimeSpan BatchingInterval { get; set; }
+
+        string ConnectionString { get; set; }
     }
 
     public class ConnectionConfiguration : IConnectionConfiguration
@@ -24,6 +26,8 @@
         }
 
         public TimeSpan BatchingInterval { get; set; }
+
+        public string ConnectionString { get; set; }
 
         public ushort Timeout { get; set; }
 

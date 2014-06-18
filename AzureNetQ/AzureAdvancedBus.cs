@@ -47,10 +47,9 @@
 
         public AzureAdvancedBus(IAzureNetQLogger logger, IConnectionConfiguration configuration)
         {
-            var connectionString = CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString");
-            this.namespaceManager = NamespaceManager.CreateFromConnectionString(connectionString);
+            this.namespaceManager = NamespaceManager.CreateFromConnectionString(configuration.ConnectionString);
 
-            var pairs = connectionString.Split(';').Select(o => o.Split('=')).Where(o => o.Length > 1);
+            var pairs = configuration.ConnectionString.Split(';').Select(o => o.Split('=')).Where(o => o.Length > 1);
 
             var dictionary = pairs.ToDictionary(key => key[0], value => value[1]);
             var address = this.namespaceManager.Address;

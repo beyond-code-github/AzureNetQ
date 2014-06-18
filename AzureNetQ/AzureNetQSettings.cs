@@ -31,5 +31,10 @@
         public Func<IRpc> Rpc { get; set; }
 
         public Func<ISendReceive> SendAndReceive { get; set; }
+
+        public void SetConnectionString(string connectionString)
+        {
+            this.ConnectionConfiguration().ConnectionString = connectionString;
+        }
     }
 }
