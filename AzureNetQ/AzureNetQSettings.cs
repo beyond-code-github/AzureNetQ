@@ -7,12 +7,14 @@
 
     public class AzureNetQSettings
     {
+        private ConnectionConfiguration connectionConfiguration;
+
         public AzureNetQSettings()
         {
             this.Logger = () => new NullLogger();
             this.SendAndReceive = () => new SendReceive();
             this.Conventions = () => new Conventions(new TypeNameSerializer());
-            this.ConnectionConfiguration = () => new ConnectionConfiguration();
+            this.ConnectionConfiguration = () => connectionConfiguration = connectionConfiguration ?? new ConnectionConfiguration();
 
             this.AzureAdvancedBus = new Lazy<IAzureAdvancedBus>(
                 () => new AzureAdvancedBus(this.Logger(), this.ConnectionConfiguration()));
