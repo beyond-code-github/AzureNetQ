@@ -15,9 +15,7 @@ Goals:
 
 To connect to Service Bus...
 
-    <add key="Microsoft.ServiceBus.ConnectionString" value="Endpoint=sb://servicebus/ServiceBusDefaultNamespace;StsEndpoint=https://servicebus:10355/ServiceBusDefaultNamespace;RuntimePort=10354;ManagementPort=10355" />
-
-    var bus = AzureBusFactory.CreateBus();
+    var bus = AzureBusFactory.CreateBus("Endpoint=sb://servicebus/ServiceBusDefaultNamespace;StsEndpoint=https://servicebus:10355/ServiceBusDefaultNamespace;RuntimePort=10354;ManagementPort=10355");
 
 To publish a message...
 
