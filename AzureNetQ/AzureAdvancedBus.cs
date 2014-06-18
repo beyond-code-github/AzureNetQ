@@ -1,11 +1,12 @@
 ﻿namespace AzureNetQ
 {
+    using System.Linq;
+
     using Microsoft.ServiceBus;
     using Microsoft.ServiceBus.Messaging;
-    using Microsoft.WindowsAzure;
+
     using System;
     using System.Collections.Concurrent;
-    using System.Linq;
     using System.Net;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
@@ -162,13 +163,7 @@
 #if DEBUG
                     SSLValidator.OverrideValidation();
 #endif
-                    if (!this.namespaceManager.TopicExists(n))
-                    {
-                        throw new InvalidOperationException(string.Format("Topic {0} was not found", n));
-                    }
-
-                    var client = this.messagingFactory.CreateTopicClient(n);
-                    return client;
+                    return this.namespaceManager.TopicExists(n) ? this.messagingFactory.CreateTopicClient(n) : null;
                 });
 
             return topicClient;
