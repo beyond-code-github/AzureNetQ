@@ -24,8 +24,7 @@ To publish a message...
 To subscribe to a message...
 
 	bus.Subscribe<MyMessage>(
-		msg => Console.WriteLine(msg.Text),
-		x => x.WithSubscription("my_subscription_id"));
+		msg => Console.WriteLine(msg.Text));
 
 Remote procedure call...
 
