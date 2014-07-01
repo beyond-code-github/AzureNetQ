@@ -105,16 +105,23 @@ namespace AzureNetQ
             var queueName = conventions.TopicNamingConvention(type);
             var queue = advancedBus.TopicFind(queueName);
 
-            var configuration = new PublishConfiguration();
-            configure(configuration);
-
-            var azureNetQMessage = new BrokeredMessage(message);
-            if (!string.IsNullOrEmpty(configuration.MessageId))
+            if (queue != null)
             {
-                azureNetQMessage.MessageId = configuration.MessageId;
+                var configuration = new PublishConfiguration();
+                configure(configuration);
+
+                var azureNetQMessage = new BrokeredMessage(message);
+                if (!string.IsNullOrEmpty(configuration.MessageId))
+                {
+                    azureNetQMessage.MessageId = configuration.MessageId;
+                }
+
+                return queue.SendAsync(azureNetQMessage);
             }
 
-            return queue.SendAsync(azureNetQMessage);
+            var tcs = new TaskCompletionSource<object>();
+            tcs.SetResult(true);
+            return tcs.Task;
         }
 
         public virtual void Subscribe<T>(Action<T> onMessage) where T : class
