@@ -68,6 +68,14 @@ namespace AzureNetQ
             this.PublishAsync(message).Wait();
         }
 
+        public void Publish<T>(T message, string topic) where T : class
+        {
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
+
+            this.PublishAsync(message, topic).Wait();
+        }
+
         public void Publish<T>(T message, Action<IPublishConfiguration> configure) where T : class
         {
             Preconditions.CheckNotNull(message, "message");
@@ -76,12 +84,30 @@ namespace AzureNetQ
             this.PublishAsync(message, configure).Wait();
         }
 
+        public void Publish<T>(T message, string topic, Action<IPublishConfiguration> configure) where T : class
+        {
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
+            Preconditions.CheckNotNull(configure, "configure");
+
+            this.PublishAsync(message, topic, configure).Wait();
+        }
+
         public void Publish(Type type, object message)
         {
             Preconditions.CheckNotNull(type, "type");
             Preconditions.CheckNotNull(message, "message");
 
             this.PublishAsync(type, message, x => { }).Wait();
+        }
+
+        public void Publish(Type type, object message, string topic)
+        {
+            Preconditions.CheckNotNull(type, "type");
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
+
+            this.PublishAsync(type, message, topic, x => { }).Wait();
         }
 
         public void Publish(Type type, object message, Action<IPublishConfiguration> configure)
@@ -93,11 +119,29 @@ namespace AzureNetQ
             this.PublishAsync(type, message, configure).Wait();
         }
 
+        public void Publish(Type type, object message, string topic, Action<IPublishConfiguration> configure)
+        {
+            Preconditions.CheckNotNull(type, "type");
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
+            Preconditions.CheckNotNull(configure, "configure");
+
+            this.PublishAsync(type, message, topic, configure).Wait();
+        }
+
         public Task PublishAsync<T>(T message) where T : class
         {
             Preconditions.CheckNotNull(message, "message");
 
             return this.PublishAsync(message, x => { });
+        }
+
+        public Task PublishAsync<T>(T message, string topic) where T : class
+        {
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
+
+            return this.PublishAsync(message, topic, x => { });
         }
 
         public Task PublishAsync<T>(T message, Action<IPublishConfiguration> configure) where T : class
@@ -108,6 +152,15 @@ namespace AzureNetQ
             return this.PublishAsync(typeof(T), message, configure);
         }
 
+        public Task PublishAsync<T>(T message, string topic, Action<IPublishConfiguration> configure) where T : class
+        {
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
+            Preconditions.CheckNotNull(configure, "configure");
+
+            return this.PublishAsync(typeof(T), message, topic, configure);
+        }
+
         public Task PublishAsync(Type type, object message)
         {
             Preconditions.CheckNotNull(type, "type");
@@ -116,12 +169,30 @@ namespace AzureNetQ
             return this.PublishAsync(type, message, x => { });
         }
 
+        public Task PublishAsync(Type type, object message, string topic)
+        {
+            Preconditions.CheckNotNull(type, "type");
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
+
+            return this.PublishAsync(type, message, topic, x => { });
+        }
+
         public Task PublishAsync(Type type, object message, Action<IPublishConfiguration> configure)
+        {
+            Preconditions.CheckNotNull(type, "type");
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(configure, "configure");
+
+            return this.PublishAsync(type, message, this.conventions.TopicNamingConvention(type), configure);
+        }
+
+        public Task PublishAsync(Type type, object message, string topicName, Action<IPublishConfiguration> configure)
         {
             Preconditions.CheckNotNull(message, "message");
             Preconditions.CheckNotNull(configure, "configure");
 
-            var queueName = this.conventions.TopicNamingConvention(type);
+            var queueName = this.conventions.QueueNamingConvention(type);
             var queue = this.advancedBus.TopicFind(queueName);
 
             if (queue != null)
@@ -131,6 +202,7 @@ namespace AzureNetQ
 
                 var content = this.serializer.MessageToString(message);
                 var azureNetQMessage = new BrokeredMessage(content);
+                azureNetQMessage.Properties.Add("topic", topicName);
 
                 if (!string.IsNullOrEmpty(configuration.MessageId))
                 {
@@ -187,9 +259,10 @@ namespace AzureNetQ
             var configuration = new SubscriptionConfiguration();
             configure(configuration);
 
-            var topicName = this.conventions.TopicNamingConvention(typeof(T));
+            var queueName = this.conventions.QueueNamingConvention(typeof(T));
             var subscriptionClient = this.advancedBus.SubscriptionDeclare(
-                topicName,
+                queueName,
+                configuration.Topics,
                 configuration.Subscription,
                 configuration.ReceiveMode,
                 configuration.RequiresDuplicateDetection);

@@ -1,5 +1,7 @@
 ﻿namespace AzureNetQ.FluentConfiguration
 {
+    using System.Collections.Generic;
+
     using Microsoft.ServiceBus.Messaging;
 
     public interface ISubscriptionConfiguration
@@ -15,24 +17,25 @@
 
     public class SubscriptionConfiguration : ISubscriptionConfiguration
     {
-        public string Topic { get; private set; }
+        public SubscriptionConfiguration()
+        {
+            this.Subscription = "Default";
+            this.ReceiveMode = ReceiveMode.PeekLock;
+            this.RequiresDuplicateDetection = false;
+            this.Topics = new List<string>();
+        }
 
+        public List<string> Topics { get; private set; }
+        
         public string Subscription { get; private set; }
 
         public ReceiveMode ReceiveMode { get; private set; }
 
         public bool RequiresDuplicateDetection { get; set; }
 
-        public SubscriptionConfiguration()
-        {
-            this.Subscription = "Default";
-            this.ReceiveMode = ReceiveMode.PeekLock;
-            this.RequiresDuplicateDetection = false;
-        }
-
         public ISubscriptionConfiguration WithTopic(string topic)
         {
-            this.Topic = topic;
+            this.Topics.Add(topic);
             return this;
         }
 

@@ -1,33 +1,34 @@
 ﻿namespace AzureNetQ
 {
-    using System.Linq;
-
-    using Microsoft.ServiceBus;
-    using Microsoft.ServiceBus.Messaging;
-
     using System;
     using System.Collections.Concurrent;
+    using System.Collections.Generic;
+    using System.Linq;
     using System.Net;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
+
+    using Microsoft.ServiceBus;
+    using Microsoft.ServiceBus.Messaging;
 
     public interface IAzureAdvancedBus
     {
         QueueClient QueueDeclare(string name, bool autoDelete = false);
 
-        TopicClient TopicDeclare(string name, bool requiresDuplicateDetection);
-
-        SubscriptionClient SubscriptionDeclare(
-            string name,
-            string subscription,
-            ReceiveMode receiveMode,
-            bool requiresDuplicateDetection);
-
         void QueueDelete(string name);
+
+        TopicClient TopicFind(string name);
+
+        TopicClient TopicDeclare(string name, bool requiresDuplicateDetection);
 
         void TopicDelete(string topic);
 
-        TopicClient TopicFind(string name);
+        SubscriptionClient SubscriptionDeclare(
+            string name,
+            List<string> topic,
+            string subscription,
+            ReceiveMode receiveMode,
+            bool requiresDuplicateDetection);
     }
 
     public class AzureAdvancedBus : IAzureAdvancedBus
@@ -88,12 +89,12 @@
         {
             Preconditions.CheckNotNull(name, "name");
 
-            return this.queues.GetOrAdd(name,
+            return this.queues.GetOrAdd(
+                name,
                 s =>
                 {
 #if DEBUG
-
-                    SSLValidator.OverrideValidation();
+                    SslValidator.OverrideValidation();
 #endif
                     if (!namespaceManager.QueueExists(s))
                     {
@@ -116,6 +117,7 @@
 
         public SubscriptionClient SubscriptionDeclare(
             string name,
+            List<string> topicNames,
             string subscription,
             ReceiveMode receiveMode,
             bool requiresDuplicateDetection)
@@ -123,35 +125,46 @@
             var topicClient = this.TopicDeclare(name, requiresDuplicateDetection);
 
             return this.subscriptions.GetOrAdd(
-                BuildSubscriptionKey(name, subscription),
+                BuildSubscriptionKey(name, subscription, topicNames),
                 s =>
                     {
 #if DEBUG
-
-                        SSLValidator.OverrideValidation();
+                    SslValidator.OverrideValidation();
 #endif
-                        if (!namespaceManager.SubscriptionExists(topicClient.Path, subscription))
-                        {
-                            var description = new SubscriptionDescription(topicClient.Path, subscription);
+                        var parts = new List<string> { subscription };
+                        parts.AddRange(topicNames);
 
-                            logger.DebugWrite(
-                                "Declared Subscription: '{0}' on Topic {1}",
-                                subscription,
-                                topicClient.Path);
-                            namespaceManager.CreateSubscription(description);
+                        var subscriptionId =
+                            string.Join("-", parts.Where(o => !string.IsNullOrEmpty(o)))
+                                .Replace("#", "_")
+                                .Replace("*", "_");
+
+                        if (!namespaceManager.SubscriptionExists(topicClient.Path, subscriptionId))
+                        {
+                            var description = new SubscriptionDescription(topicClient.Path, subscriptionId)
+                                                  {
+                                                      MaxDeliveryCount
+                                                          = 1
+                                                  };
+
+                            if (topicNames.Any())
+                            {
+                                var expression = string.Join(
+                                    " OR ",
+                                    topicNames.Select(
+                                        o => string.Format("user.topic LIKE '{0}'", TransformWildcards(o))));
+
+                                var filter = new SqlFilter(expression);
+                                namespaceManager.CreateSubscription(description, filter);
+                            }
+                            else
+                            {
+                                namespaceManager.CreateSubscription(description);
+                            }
                         }
 
-                        var client = messagingFactory.CreateSubscriptionClient(
-                            topicClient.Path,
-                            subscription,
-                            receiveMode);
-                        return client;
+                        return messagingFactory.CreateSubscriptionClient(topicClient.Path, subscriptionId, receiveMode);
                     });
-        }
-
-        private static string BuildSubscriptionKey(string name, string subscription)
-        {
-            return string.Format("{0}{1}", name, subscription);
         }
 
         public TopicClient TopicFind(string name)
@@ -161,7 +174,7 @@
                 n =>
                 {
 #if DEBUG
-                    SSLValidator.OverrideValidation();
+                    SslValidator.OverrideValidation();
 #endif
                     return this.namespaceManager.TopicExists(n) ? this.messagingFactory.CreateTopicClient(n) : null;
                 });
@@ -174,21 +187,21 @@
             var topicClient = this.topics.GetOrAdd(
                 name,
                 n =>
-                    {
+                {
 #if DEBUG
-                        SSLValidator.OverrideValidation();
+                    SslValidator.OverrideValidation();
 #endif
-                        if (!this.namespaceManager.TopicExists(n))
-                        {
-                            var description = new TopicDescription(n) { RequiresDuplicateDetection = requiresDuplicateDetection };
+                    if (!this.namespaceManager.TopicExists(n))
+                    {
+                        var description = new TopicDescription(n) { RequiresDuplicateDetection = requiresDuplicateDetection };
 
-                            this.logger.DebugWrite("Declared Topic: '{0}'", n);
-                            this.namespaceManager.CreateTopic(description);
-                        }
+                        this.logger.DebugWrite("Declared Topic: '{0}'", n);
+                        this.namespaceManager.CreateTopic(description);
+                    }
 
-                        var client = this.messagingFactory.CreateTopicClient(n);
-                        return client;
-                    });
+                    var client = this.messagingFactory.CreateTopicClient(n);
+                    return client;
+                });
             return topicClient;
         }
 
@@ -198,12 +211,11 @@
             if (this.queues.TryRemove(name, out toRemove))
             {
 #if DEBUG
-
-                SSLValidator.OverrideValidation();
+                SslValidator.OverrideValidation();
 #endif
-                if (namespaceManager.QueueExists(name))
+                if (this.namespaceManager.QueueExists(name))
                 {
-                    namespaceManager.DeleteQueue(name);
+                    this.namespaceManager.DeleteQueue(name);
                 }
             }
         }
@@ -214,29 +226,41 @@
             if (this.topics.TryRemove(topic, out toRemove))
             {
 #if DEBUG
-
-                SSLValidator.OverrideValidation();
+                SslValidator.OverrideValidation();
 #endif
-                if (namespaceManager.TopicExists(topic))
+                if (this.namespaceManager.TopicExists(topic))
                 {
-                    namespaceManager.DeleteTopic(topic);
+                    this.namespaceManager.DeleteTopic(topic);
                 }
             }
         }
 
-        public static class SSLValidator
+        private static string TransformWildcards(string o)
         {
-            private static bool OnValidateCertificate(object sender, X509Certificate certificate, X509Chain chain,
-                                                      SslPolicyErrors sslPolicyErrors)
-            {
-                return true;
-            }
+            return o.Replace('#', '%').Replace('*', '%');
+        }
 
+        private static string BuildSubscriptionKey(string name, string subscription, IEnumerable<string> topics)
+        {
+            return string.Format("{0}{1}{2}", name, subscription, string.Join(string.Empty, topics));
+        }
+
+        public static class SslValidator
+        {
             public static void OverrideValidation()
             {
                 ServicePointManager.ServerCertificateValidationCallback =
                     OnValidateCertificate;
                 ServicePointManager.Expect100Continue = true;
+            }
+
+            private static bool OnValidateCertificate(
+                object sender,
+                X509Certificate certificate,
+                X509Chain chain,
+                SslPolicyErrors sslPolicyErrors)
+            {
+                return true;
             }
         }
     }
