@@ -5,6 +5,7 @@ namespace AzureNetQ
     public interface ITypeNameSerializer
     {
         string Serialize(Type type);
+
         Type DeSerialize(string typeName);
     }
 
@@ -19,6 +20,7 @@ namespace AzureNetQ
                     "type name {0}, is not a valid AzureNetQ type name. Expected Type:Assembly", 
                     typeName);
             }
+
             var type = Type.GetType(nameParts[0] + ", " + nameParts[1]);
             if (type == null)
             {
@@ -26,6 +28,7 @@ namespace AzureNetQ
                     "Cannot find type {0}",
                     typeName);
             }
+
             return type;
         }
 
@@ -35,10 +38,12 @@ namespace AzureNetQ
             var typeName = type.FullName + "-" + type.Assembly.GetName().Name;
             if (typeName.Length > 255)
             {
-                throw new AzureNetQException("The serialized name of type '{0}' exceeds the AMQP" + 
-                    "maximum short string lengh of 255 characters.",
+                throw new AzureNetQException(
+                    "The serialized name of type '{0}' exceeds the AMQP"
+                    + "maximum short string lengh of 255 characters.",
                     type.Name);
             }
+            
             return typeName;
         }
     }

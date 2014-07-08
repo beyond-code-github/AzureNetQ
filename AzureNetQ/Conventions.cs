@@ -2,9 +2,9 @@ namespace AzureNetQ
 {
     using System;
 
-	public delegate string ExchangeNameConvention(Type messageType);
+    public delegate string ExchangeNameConvention(Type messageType);
 
-	public delegate string TopicNameConvention(Type messageType);
+    public delegate string TopicNameConvention(Type messageType);
 
     public delegate string QueueNameConvention(Type messageType);
 
@@ -20,9 +20,9 @@ namespace AzureNetQ
 
     public delegate string ConsumerTagConvention();
 
-	public interface IConventions
-	{
-		TopicNameConvention TopicNamingConvention { get; set; }
+    public interface IConventions
+    {
+        TopicNameConvention TopicNamingConvention { get; set; }
 
         QueueNameConvention QueueNamingConvention { get; set; }
 
@@ -33,33 +33,32 @@ namespace AzureNetQ
         RpcReturnQueueNamingConvention RpcReturnQueueNamingConvention { get; set; }
 
         ConsumerTagConvention ConsumerTagConvention { get; set; }
-	}
+    }
 
-	public class Conventions : IConventions
-	{
-		public Conventions(ITypeNameSerializer typeNameSerializer)
-		{
-		    Preconditions.CheckNotNull(typeNameSerializer, "typeNameSerializer");
+    public class Conventions : IConventions
+    {
+        public Conventions(ITypeNameSerializer typeNameSerializer)
+        {
+            Preconditions.CheckNotNull(typeNameSerializer, "typeNameSerializer");
 
-		    // Establish default conventions.
-			TopicNamingConvention = (messageType) =>
-			    {
+            // Establish default conventions.
+            this.TopicNamingConvention = messageType =>
+                {
                     var typeName = typeNameSerializer.Serialize(messageType);
                     return string.Format("Topic_{0}", typeName);
-			    };
-			RpcRoutingKeyNamingConvention = typeNameSerializer.Serialize;
-            ErrorQueueNamingConvention = () => "AzureNetQ_Default_Error_Queue";
-		    RpcReturnQueueNamingConvention = () => "azurenetq.response." + Guid.NewGuid().ToString();
+                };
+            RpcRoutingKeyNamingConvention = typeNameSerializer.Serialize;
+            this.ErrorQueueNamingConvention = () => "AzureNetQ_Default_Error_Queue";
+            RpcReturnQueueNamingConvention = () => "azurenetq.response." + Guid.NewGuid();
             ConsumerTagConvention = () => Guid.NewGuid().ToString();
-		    QueueNamingConvention = (messageType) =>
-		        {
-		            var typeName = typeNameSerializer.Serialize(messageType);
-		            return string.Format("{0}", typeName);
-		        };
+            this.QueueNamingConvention = messageType =>
+                {
+                    var typeName = typeNameSerializer.Serialize(messageType);
+                    return string.Format("{0}", typeName);
+                };
+        }
 
-		}
-
-		public TopicNameConvention TopicNamingConvention { get; set; }
+        public TopicNameConvention TopicNamingConvention { get; set; }
 
         public QueueNameConvention QueueNamingConvention { get; set; }
 
@@ -70,5 +69,5 @@ namespace AzureNetQ
         public RpcReturnQueueNamingConvention RpcReturnQueueNamingConvention { get; set; }
 
         public ConsumerTagConvention ConsumerTagConvention { get; set; }
-	}
+    }
 }

@@ -18,6 +18,8 @@
 
         private readonly IConnectionConfiguration configuration;
 
+        private readonly ISerializer serializer;
+
         private readonly ConcurrentDictionary<RpcKey, string> responseQueues = new ConcurrentDictionary<RpcKey, string>();
 
         private readonly ConcurrentDictionary<string, ResponseAction> responseActions = new ConcurrentDictionary<string, ResponseAction>();
@@ -30,7 +32,7 @@
 
         private const string ExceptionMessageKey = "ExceptionMessage";
 
-        public Rpc(IConventions conventions, IAzureAdvancedBus advancedBus, IConnectionConfiguration configuration)
+        public Rpc(IConventions conventions, IAzureAdvancedBus advancedBus, IConnectionConfiguration configuration, ISerializer serializer)
         {
             Preconditions.CheckNotNull(conventions, "conventions");
             Preconditions.CheckNotNull(advancedBus, "advancedBus");
@@ -39,6 +41,7 @@
             this.conventions = conventions;
             this.advancedBus = advancedBus;
             this.configuration = configuration;
+            this.serializer = serializer;
         }
 
         public Task<TResponse> Request<TRequest, TResponse>(TRequest request)
@@ -57,9 +60,9 @@
                     string.Format("Request timed out. CorrelationId: {0}", correlationId.ToString())));
             });
 
-            timer.Change(TimeSpan.FromSeconds(configuration.Timeout), disablePeriodicSignaling);
+            timer.Change(TimeSpan.FromSeconds(this.configuration.Timeout), this.disablePeriodicSignaling);
 
-            responseActions.TryAdd(
+            this.responseActions.TryAdd(
                 correlationId.ToString(),
                 new ResponseAction
                     {
@@ -85,57 +88,17 @@
                                 }
                                 else
                                 {
-                                    tcs.TrySetResult(message.GetBody<TResponse>());
+                                    var content = message.GetBody<string>();
+                                    var response = this.serializer.StringToMessage<TResponse>(content);
+                                    tcs.TrySetResult(response);
                                 }
                             }
                     });
 
-            var queueName = SubscribeToResponse<TRequest, TResponse>();
+            var queueName = this.SubscribeToResponse<TRequest, TResponse>();
             RequestPublish(request, queueName, correlationId);
 
             return tcs.Task;
-        }
-
-        private string SubscribeToResponse<TRequest, TResponse>()
-            where TResponse : class
-        {
-            var rpcKey = new RpcKey { Request = typeof(TRequest), Response = typeof(TResponse) };
-
-            responseQueues.AddOrUpdate(rpcKey,
-                key =>
-                {
-                    var name = conventions.RpcReturnQueueNamingConvention();
-                    var queue = advancedBus.QueueDeclare(name, autoDelete: true);
-                    queue.OnMessageAsync(message => Task.Factory.StartNew(() =>
-                    {
-                        ResponseAction responseAction;
-                        if (responseActions.TryRemove(message.CorrelationId, out responseAction))
-                        {
-                            responseAction.OnSuccess(message);
-                        }
-                    }), new OnMessageOptions { AutoComplete = true, MaxConcurrentCalls = configuration.MaxConcurrentCalls });
-
-                    return name;
-                },
-                (_, queueName) => queueName);
-
-            return responseQueues[rpcKey];
-        }
-
-        private void RequestPublish<TRequest>(TRequest request, string returnQueueName, Guid correlationId) where TRequest : class
-        {
-            var requestMessage = new BrokeredMessage(request)
-                                     {
-                                         CorrelationId = correlationId.ToString(),
-                                         TimeToLive = TimeSpan.FromMilliseconds(configuration.Timeout * 1000)
-                                     };
-
-            requestMessage.Properties.Add(ReplyToKey, returnQueueName);
-
-            var routingKey = conventions.QueueNamingConvention(typeof(TRequest));
-            var queue = this.advancedBus.QueueDeclare(routingKey);
-
-            queue.SendAsync(requestMessage);
         }
 
         public IDisposable Respond<TRequest, TResponse>(Func<TRequest, Task<TResponse>> responder)
@@ -144,49 +107,114 @@
         {
             Preconditions.CheckNotNull(responder, "responder");
 
-            var routingKey = conventions.RpcRoutingKeyNamingConvention(typeof(TRequest));
-            var queue = advancedBus.QueueDeclare(routingKey);
+            var routingKey = this.conventions.RpcRoutingKeyNamingConvention(typeof(TRequest));
+            var queue = this.advancedBus.QueueDeclare(routingKey);
 
             queue.OnMessageAsync(
                 requestMessage =>
-                {
-                    var tcs = new TaskCompletionSource<object>();
+                    {
+                        var tcs = new TaskCompletionSource<object>();
 
-                    responder(requestMessage.GetBody<TRequest>()).ContinueWith(
-                        task =>
-                        {
-                            var responseQueue =
-                                advancedBus.QueueDeclare(requestMessage.Properties[ReplyToKey] as string);
-                            if (task.IsFaulted)
-                            {
-                                if (task.Exception != null)
+                        var content = requestMessage.GetBody<string>();
+                        var messageBody = this.serializer.StringToMessage<TRequest>(content);
+
+                        responder(messageBody).ContinueWith(
+                            task =>
                                 {
-                                    var body = Activator.CreateInstance<TResponse>();
-                                    var responseMessage = new BrokeredMessage(body);
-                                    responseMessage.Properties.Add(IsFaultedKey, true);
-                                    responseMessage.Properties.Add(
-                                        ExceptionMessageKey,
-                                        task.Exception.InnerException.Message);
-                                    responseMessage.CorrelationId = requestMessage.CorrelationId;
-                                    responseQueue.SendAsync(responseMessage);
+                                    var responseQueue =
+                                        this.advancedBus.QueueDeclare(requestMessage.Properties[ReplyToKey] as string);
+                                    if (task.IsFaulted)
+                                    {
+                                        if (task.Exception != null)
+                                        {
+                                            var body = Activator.CreateInstance<TResponse>();
+                                            var dummyContent = this.serializer.MessageToString(body);
 
-                                    // Set the result to null and don't indicate fault otherwise this message will be retried by service bus
-                                    tcs.SetResult(null);
-                                }
-                            }
-                            else
-                            {
-                                var responseMessage = new BrokeredMessage(task.Result) { CorrelationId = requestMessage.CorrelationId };
-                                responseQueue.SendAsync(responseMessage);
-                                tcs.SetResult(null);
-                            }
-                        });
+                                            var responseMessage = new BrokeredMessage(dummyContent);
+                                            responseMessage.Properties.Add(IsFaultedKey, true);
+                                            responseMessage.Properties.Add(
+                                                ExceptionMessageKey,
+                                                task.Exception.InnerException.Message);
+                                            responseMessage.CorrelationId = requestMessage.CorrelationId;
+                                            responseQueue.SendAsync(responseMessage);
 
-                    return tcs.Task;
-                },
-                new OnMessageOptions { AutoComplete = true, MaxConcurrentCalls = configuration.MaxConcurrentCalls });
+                                            // Set the result to null and don't indicate fault otherwise this message will be retried by service bus
+                                            tcs.SetResult(null);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        var response = this.serializer.MessageToString(task.Result);
+                                        var responseMessage = new BrokeredMessage(response)
+                                                                  {
+                                                                      CorrelationId =
+                                                                          requestMessage
+                                                                          .CorrelationId
+                                                                  };
+
+                                        responseQueue.SendAsync(responseMessage);
+                                        tcs.SetResult(null);
+                                    }
+                                });
+
+                        return tcs.Task;
+                    },
+                new OnMessageOptions { AutoComplete = true, MaxConcurrentCalls = this.configuration.MaxConcurrentCalls });
 
             return null;
+        }
+
+        private string SubscribeToResponse<TRequest, TResponse>()
+            where TResponse : class
+        {
+            var rpcKey = new RpcKey { Request = typeof(TRequest), Response = typeof(TResponse) };
+
+            this.responseQueues.AddOrUpdate(
+                rpcKey,
+                key =>
+                    {
+                        var name = conventions.RpcReturnQueueNamingConvention();
+                        var queue = advancedBus.QueueDeclare(name, autoDelete: true);
+                        queue.OnMessageAsync(
+                            message => Task.Factory.StartNew(
+                                () =>
+                                    {
+                                        ResponseAction responseAction;
+                                        if (responseActions.TryRemove(message.CorrelationId, out responseAction))
+                                        {
+                                            responseAction.OnSuccess(message);
+                                        }
+                                    }),
+                            new OnMessageOptions
+                                {
+                                    AutoComplete = true,
+                                    MaxConcurrentCalls = configuration.MaxConcurrentCalls
+                                });
+
+                        return name;
+                    },
+                (_, queueName) => queueName);
+
+            return this.responseQueues[rpcKey];
+        }
+
+        private void RequestPublish<TRequest>(TRequest request, string returnQueueName, Guid correlationId) where TRequest : class
+        {
+            var content = this.serializer.MessageToString(request);
+            var requestMessage = new BrokeredMessage(content)
+                                     {
+                                         CorrelationId = correlationId.ToString(),
+                                         TimeToLive =
+                                             TimeSpan.FromMilliseconds(
+                                                 this.configuration.Timeout * 1000)
+                                     };
+
+            requestMessage.Properties.Add(ReplyToKey, returnQueueName);
+
+            var routingKey = this.conventions.QueueNamingConvention(typeof(TRequest));
+            var queue = this.advancedBus.QueueDeclare(routingKey);
+
+            queue.SendAsync(requestMessage);
         }
     }
 }

@@ -1,32 +1,29 @@
-using System;
-using System.Threading.Tasks;
-using AzureNetQ.Consumer;
-using AzureNetQ.FluentConfiguration;
-using AzureNetQ.Producer;
-
 namespace AzureNetQ
 {
+    using System;
+    using System.Threading.Tasks;
+
+    using AzureNetQ.Consumer;
+    using AzureNetQ.FluentConfiguration;
+    using AzureNetQ.Producer;
+
     using Microsoft.ServiceBus.Messaging;
 
     public class AzureBus : IBus
     {
         private readonly IAzureNetQLogger logger;
+        
         private readonly IConventions conventions;
+
         private readonly IRpc rpc;
+
         private readonly ISendReceive sendReceive;
+
         private readonly IAzureAdvancedBus advancedBus;
 
         private readonly IConnectionConfiguration connectionConfiguration;
 
-        public IAzureNetQLogger Logger
-        {
-            get { return logger; }
-        }
-
-        public IConventions Conventions
-        {
-            get { return conventions; }
-        }
+        private readonly ISerializer serializer;
 
         public AzureBus(
             IAzureNetQLogger logger,
@@ -34,7 +31,8 @@ namespace AzureNetQ
             IRpc rpc,
             ISendReceive sendReceive,
             IAzureAdvancedBus advancedBus,
-            IConnectionConfiguration connectionConfiguration)
+            IConnectionConfiguration connectionConfiguration,
+            ISerializer serializer)
         {
             Preconditions.CheckNotNull(logger, "logger");
             Preconditions.CheckNotNull(conventions, "conventions");
@@ -42,6 +40,7 @@ namespace AzureNetQ
             Preconditions.CheckNotNull(sendReceive, "sendReceive");
             Preconditions.CheckNotNull(advancedBus, "advancedBus");
             Preconditions.CheckNotNull(connectionConfiguration, "connectionConfiguration");
+            Preconditions.CheckNotNull(serializer, "serializer");
 
             this.logger = logger;
             this.conventions = conventions;
@@ -49,13 +48,24 @@ namespace AzureNetQ
             this.sendReceive = sendReceive;
             this.advancedBus = advancedBus;
             this.connectionConfiguration = connectionConfiguration;
+            this.serializer = serializer;
+        }
+
+        public IAzureNetQLogger Logger
+        {
+            get { return this.logger; }
+        }
+
+        public IConventions Conventions
+        {
+            get { return this.conventions; }
         }
 
         public void Publish<T>(T message) where T : class
         {
             Preconditions.CheckNotNull(message, "message");
 
-            PublishAsync(message).Wait();
+            this.PublishAsync(message).Wait();
         }
 
         public void Publish<T>(T message, Action<IPublishConfiguration> configure) where T : class
@@ -63,7 +73,7 @@ namespace AzureNetQ
             Preconditions.CheckNotNull(message, "message");
             Preconditions.CheckNotNull(configure, "configure");
 
-            PublishAsync(message, configure).Wait();
+            this.PublishAsync(message, configure).Wait();
         }
 
         public void Publish(Type type, object message, Action<IPublishConfiguration> configure)
@@ -71,14 +81,14 @@ namespace AzureNetQ
             Preconditions.CheckNotNull(message, "message");
             Preconditions.CheckNotNull(configure, "topic");
 
-            PublishAsync(type, message, configure).Wait();
+            this.PublishAsync(type, message, configure).Wait();
         }
 
         public Task PublishAsync<T>(T message) where T : class
         {
             Preconditions.CheckNotNull(message, "message");
 
-            return PublishAsync(message, x => { });
+            return this.PublishAsync(message, x => { });
         }
 
         public Task PublishAsync<T>(T message, Action<IPublishConfiguration> configure) where T : class
@@ -102,15 +112,17 @@ namespace AzureNetQ
             Preconditions.CheckNotNull(message, "message");
             Preconditions.CheckNotNull(configure, "configure");
             
-            var queueName = conventions.TopicNamingConvention(type);
-            var queue = advancedBus.TopicFind(queueName);
+            var queueName = this.conventions.TopicNamingConvention(type);
+            var queue = this.advancedBus.TopicFind(queueName);
 
             if (queue != null)
             {
                 var configuration = new PublishConfiguration();
                 configure(configuration);
 
-                var azureNetQMessage = new BrokeredMessage(message);
+                var content = this.serializer.MessageToString(message);
+                var azureNetQMessage = new BrokeredMessage(content);
+
                 if (!string.IsNullOrEmpty(configuration.MessageId))
                 {
                     azureNetQMessage.MessageId = configuration.MessageId;
@@ -119,14 +131,14 @@ namespace AzureNetQ
                 return queue.SendAsync(azureNetQMessage);
             }
 
-            var tcs = new TaskCompletionSource<object>();
-            tcs.SetResult(true);
+            var tcs = new TaskCompletionSource<bool>();
+            tcs.SetResult(false);
             return tcs.Task;
         }
 
         public virtual void Subscribe<T>(Action<T> onMessage) where T : class
         {
-            Subscribe(onMessage, x => { });
+            this.Subscribe(onMessage, x => { });
         }
 
         public virtual void Subscribe<T>(Action<T> onMessage, Action<ISubscriptionConfiguration> configure) where T : class
@@ -134,27 +146,28 @@ namespace AzureNetQ
             Preconditions.CheckNotNull(onMessage, "onMessage");
             Preconditions.CheckNotNull(configure, "configure");
 
-            SubscribeAsync<T>(msg =>
-            {
-                var tcs = new TaskCompletionSource<object>();
-                try
-                {
-                    onMessage(msg);
-                    tcs.SetResult(null);
-                }
-                catch (Exception exception)
-                {
-                    tcs.SetException(exception);
-                }
+            this.SubscribeAsync<T>(
+                msg =>
+                    {
+                        var tcs = new TaskCompletionSource<object>();
+                        try
+                        {
+                            onMessage(msg);
+                            tcs.SetResult(null);
+                        }
+                        catch (Exception exception)
+                        {
+                            tcs.SetException(exception);
+                        }
 
-                return tcs.Task;
-            },
-            configure);
+                        return tcs.Task;
+                    },
+                configure);
         }
 
         public virtual void SubscribeAsync<T>(Func<T, Task> onMessage) where T : class
         {
-            SubscribeAsync(onMessage, x => { });
+            this.SubscribeAsync(onMessage, x => { });
         }
 
         public virtual void SubscribeAsync<T>(Func<T, Task> onMessage, Action<ISubscriptionConfiguration> configure) where T : class
@@ -165,16 +178,21 @@ namespace AzureNetQ
             var configuration = new SubscriptionConfiguration();
             configure(configuration);
 
-            var topicName = conventions.TopicNamingConvention(typeof(T));
-            var subscriptionClient = advancedBus.SubscriptionDeclare(
+            var topicName = this.conventions.TopicNamingConvention(typeof(T));
+            var subscriptionClient = this.advancedBus.SubscriptionDeclare(
                 topicName,
                 configuration.Subscription,
                 configuration.ReceiveMode,
                 configuration.RequiresDuplicateDetection);
 
             subscriptionClient.OnMessageAsync(
-                message => onMessage(message.GetBody<T>()),
-                new OnMessageOptions { AutoComplete = true, MaxConcurrentCalls = connectionConfiguration.MaxConcurrentCalls });
+                message =>
+                    {
+                        var content = message.GetBody<string>();
+                        var messageBody = serializer.StringToMessage<T>(content);
+                        return onMessage(messageBody);
+                    },
+                new OnMessageOptions { AutoComplete = true, MaxConcurrentCalls = this.connectionConfiguration.MaxConcurrentCalls });
         }
         
         public TResponse Request<TRequest, TResponse>(TRequest request)
@@ -183,7 +201,7 @@ namespace AzureNetQ
         {
             Preconditions.CheckNotNull(request, "request");
 
-            var task = RequestAsync<TRequest, TResponse>(request);
+            var task = this.RequestAsync<TRequest, TResponse>(request);
             task.Wait();
             return task.Result;
         }
@@ -194,7 +212,7 @@ namespace AzureNetQ
         {
             Preconditions.CheckNotNull(request, "request");
 
-            return rpc.Request<TRequest, TResponse>(request);
+            return this.rpc.Request<TRequest, TResponse>(request);
         }
 
         public virtual void Respond<TRequest, TResponse>(Func<TRequest, TResponse> responder)
@@ -215,35 +233,35 @@ namespace AzureNetQ
         {
             Preconditions.CheckNotNull(responder, "responder");
 
-            rpc.Respond(responder);
+            this.rpc.Respond(responder);
         }
 
         public void Send<T>(string queue, T message)
             where T : class
         {
-            sendReceive.Send(queue, message);
+            this.sendReceive.Send(queue, message);
         }
 
         public IDisposable Receive<T>(string queue, Action<T> onMessage)
             where T : class
         {
-            return sendReceive.Receive(queue, onMessage);
+            return this.sendReceive.Receive(queue, onMessage);
         }
 
         public IDisposable Receive<T>(string queue, Func<T, Task> onMessage)
             where T : class
         {
-            return sendReceive.Receive(queue, onMessage);
+            return this.sendReceive.Receive(queue, onMessage);
         }
 
         public IDisposable Receive(string queue, Action<IReceiveRegistration> addHandlers)
         {
-            return sendReceive.Receive(queue, addHandlers);
+            return this.sendReceive.Receive(queue, addHandlers);
         }
 
         public virtual void Dispose()
         {
-            //throw new NotImplementedException();
+            // throw new NotImplementedException();
         }
     }
 }

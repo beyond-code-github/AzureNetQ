@@ -3,8 +3,7 @@
     using Microsoft.WindowsAzure;
 
     public static class AzureBusFactory
-    {   
-
+    {
         public static IBus CreateBus()
         {
             return CreateBus(new AzureNetQSettings());
@@ -31,8 +30,9 @@
                 settings.Conventions(),
                 settings.Rpc(),
                 settings.SendAndReceive(),
-                settings.AzureAdvancedBus.Value, 
-                configuration);
+                settings.AzureAdvancedBus.Value,
+                configuration,
+                settings.Serializer());
         }
     }
 }
