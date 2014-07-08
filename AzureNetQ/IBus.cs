@@ -177,5 +177,7 @@ namespace AzureNetQ
         /// <param name="addHandlers">A function to add handlers</param>
         /// <returns>Consumer cancellation. Call Dispose to stop consuming</returns>
         IDisposable Receive(string queue, Action<IReceiveRegistration> addHandlers);
+
+        void Publish(Type type, object message);
     }
 }

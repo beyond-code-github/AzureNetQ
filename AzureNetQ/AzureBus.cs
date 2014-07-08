@@ -12,7 +12,7 @@ namespace AzureNetQ
     public class AzureBus : IBus
     {
         private readonly IAzureNetQLogger logger;
-        
+
         private readonly IConventions conventions;
 
         private readonly IRpc rpc;
@@ -76,10 +76,19 @@ namespace AzureNetQ
             this.PublishAsync(message, configure).Wait();
         }
 
+        public void Publish(Type type, object message)
+        {
+            Preconditions.CheckNotNull(type, "type");
+            Preconditions.CheckNotNull(message, "message");
+
+            this.PublishAsync(type, message, x => { }).Wait();
+        }
+
         public void Publish(Type type, object message, Action<IPublishConfiguration> configure)
         {
+            Preconditions.CheckNotNull(type, "type");
             Preconditions.CheckNotNull(message, "message");
-            Preconditions.CheckNotNull(configure, "topic");
+            Preconditions.CheckNotNull(configure, "configure");
 
             this.PublishAsync(type, message, configure).Wait();
         }
@@ -111,7 +120,7 @@ namespace AzureNetQ
         {
             Preconditions.CheckNotNull(message, "message");
             Preconditions.CheckNotNull(configure, "configure");
-            
+
             var queueName = this.conventions.TopicNamingConvention(type);
             var queue = this.advancedBus.TopicFind(queueName);
 
@@ -148,20 +157,20 @@ namespace AzureNetQ
 
             this.SubscribeAsync<T>(
                 msg =>
+                {
+                    var tcs = new TaskCompletionSource<object>();
+                    try
                     {
-                        var tcs = new TaskCompletionSource<object>();
-                        try
-                        {
-                            onMessage(msg);
-                            tcs.SetResult(null);
-                        }
-                        catch (Exception exception)
-                        {
-                            tcs.SetException(exception);
-                        }
+                        onMessage(msg);
+                        tcs.SetResult(null);
+                    }
+                    catch (Exception exception)
+                    {
+                        tcs.SetException(exception);
+                    }
 
-                        return tcs.Task;
-                    },
+                    return tcs.Task;
+                },
                 configure);
         }
 
@@ -187,14 +196,14 @@ namespace AzureNetQ
 
             subscriptionClient.OnMessageAsync(
                 message =>
-                    {
-                        var content = message.GetBody<string>();
-                        var messageBody = serializer.StringToMessage<T>(content);
-                        return onMessage(messageBody);
-                    },
+                {
+                    var content = message.GetBody<string>();
+                    var messageBody = serializer.StringToMessage<T>(content);
+                    return onMessage(messageBody);
+                },
                 new OnMessageOptions { AutoComplete = true, MaxConcurrentCalls = this.connectionConfiguration.MaxConcurrentCalls });
         }
-        
+
         public TResponse Request<TRequest, TResponse>(TRequest request)
             where TRequest : class
             where TResponse : class
