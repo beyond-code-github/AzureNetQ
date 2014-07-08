@@ -265,7 +265,8 @@ namespace AzureNetQ
                 configuration.Topics,
                 configuration.Subscription,
                 configuration.ReceiveMode,
-                configuration.RequiresDuplicateDetection);
+                configuration.RequiresDuplicateDetection,
+                configuration.MaxDeliveryCount);
 
             subscriptionClient.OnMessageAsync(
                 message =>

@@ -28,7 +28,8 @@
             List<string> topic,
             string subscription,
             ReceiveMode receiveMode,
-            bool requiresDuplicateDetection);
+            bool requiresDuplicateDetection,
+            int maxDeliveryCount);
     }
 
     public class AzureAdvancedBus : IAzureAdvancedBus
@@ -120,7 +121,8 @@
             List<string> topicNames,
             string subscription,
             ReceiveMode receiveMode,
-            bool requiresDuplicateDetection)
+            bool requiresDuplicateDetection,
+            int maxDeliveryCount)
         {
             var topicClient = this.TopicDeclare(name, requiresDuplicateDetection);
 
@@ -143,8 +145,7 @@
                         {
                             var description = new SubscriptionDescription(topicClient.Path, subscriptionId)
                                                   {
-                                                      MaxDeliveryCount
-                                                          = 1
+                                                      MaxDeliveryCount = maxDeliveryCount,
                                                   };
 
                             if (topicNames.Any())

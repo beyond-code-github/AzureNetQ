@@ -23,6 +23,7 @@
             this.ReceiveMode = ReceiveMode.PeekLock;
             this.RequiresDuplicateDetection = false;
             this.Topics = new List<string>();
+            this.MaxDeliveryCount = 1;
         }
 
         public List<string> Topics { get; private set; }
@@ -32,6 +33,8 @@
         public ReceiveMode ReceiveMode { get; private set; }
 
         public bool RequiresDuplicateDetection { get; set; }
+
+        public int MaxDeliveryCount { get; set; }
 
         public ISubscriptionConfiguration WithTopic(string topic)
         {
@@ -54,6 +57,12 @@
         public ISubscriptionConfiguration WithDuplicateDetection()
         {
             this.RequiresDuplicateDetection = true;
+            return this;
+        }
+
+        public ISubscriptionConfiguration WithMaxDeliveryCount(int maxDeliveryCount)
+        {
+            this.MaxDeliveryCount = maxDeliveryCount;
             return this;
         }
     }
