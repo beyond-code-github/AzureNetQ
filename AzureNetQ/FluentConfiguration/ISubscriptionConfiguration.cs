@@ -13,6 +13,8 @@
         ISubscriptionConfiguration InReadAndDeleteMode();
 
         ISubscriptionConfiguration WithDuplicateDetection();
+        
+        ISubscriptionConfiguration WithMaxDeliveryCount(int maxDeliveryCount);
     }
 
     public class SubscriptionConfiguration : ISubscriptionConfiguration
