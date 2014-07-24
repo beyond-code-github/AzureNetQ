@@ -4,6 +4,7 @@
 
     using AzureNetQ.Loggers;
     using AzureNetQ.Producer;
+    using AzureNetQ.Consumer;
 
     public class AzureNetQSettings
     {
@@ -12,7 +13,6 @@
         public AzureNetQSettings()
         {
             this.Logger = () => new NullLogger();
-            this.SendAndReceive = () => new SendReceive();
             this.Conventions = () => new Conventions(new TypeNameSerializer());
             this.ConnectionConfiguration = () => connectionConfiguration = connectionConfiguration ?? new ConnectionConfiguration();
             this.Serializer = () => new JsonSerializer(new TypeNameSerializer());
@@ -27,6 +27,15 @@
                     this.AzureAdvancedBus.Value,
                     this.ConnectionConfiguration(),
                     this.Serializer());
+
+            this.SendAndReceive = 
+                () => 
+                    new SendReceive(
+                        this.AzureAdvancedBus.Value, 
+                        this.ConnectionConfiguration(),
+                        new HandlerCollectionFactory(this.Logger()),
+                        new TypeNameSerializer(),
+                        this.Serializer());
         }
 
         public Lazy<IAzureAdvancedBus> AzureAdvancedBus { get; set; }
