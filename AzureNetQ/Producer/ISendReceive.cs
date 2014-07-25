@@ -1,9 +1,10 @@
-﻿using System;
-using System.Threading.Tasks;
-using AzureNetQ.Consumer;
-
-namespace AzureNetQ.Producer
+﻿namespace AzureNetQ.Producer
 {
+    using System;
+    using System.Threading.Tasks;
+
+    using AzureNetQ.Consumer;
+
     public interface ISendReceive
     {
         /// <summary>

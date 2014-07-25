@@ -1,8 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-
-namespace AzureNetQ.Consumer
+﻿namespace AzureNetQ.Consumer
 {
+    using System;
+    using System.Threading.Tasks;
+
     public interface IReceiveRegistration
     {
         /// <summary>
@@ -21,6 +21,4 @@ namespace AzureNetQ.Consumer
         /// <returns>'this' for fluent configuration</returns>
         IReceiveRegistration Add<T>(Action<T> onMessage) where T : class;
     }
-
-
 }

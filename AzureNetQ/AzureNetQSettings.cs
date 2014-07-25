@@ -14,7 +14,7 @@
             this.Logger = () => new NullLogger();
             this.SendAndReceive = () => new SendReceive();
             this.Conventions = () => new Conventions(new TypeNameSerializer());
-            this.ConnectionConfiguration = () => connectionConfiguration = connectionConfiguration ?? new ConnectionConfiguration();
+            this.ConnectionConfiguration = () => this.connectionConfiguration = this.connectionConfiguration ?? new ConnectionConfiguration();
             this.Serializer = () => new JsonSerializer(new TypeNameSerializer());
 
             this.AzureAdvancedBus = new Lazy<IAzureAdvancedBus>(

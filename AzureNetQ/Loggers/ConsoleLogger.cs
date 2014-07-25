@@ -1,36 +1,50 @@
-using System;
-
 namespace AzureNetQ.Loggers
 {
+    using System;
+
     public class ConsoleLogger : IAzureNetQLogger
     {
-        public bool Debug { get; set; }
-        public bool Info { get; set; }
-        public bool Error { get; set; }
-
         public ConsoleLogger()
         {
-            Debug = true;
-            Info = true;
-            Error = true;
+            this.Debug = true;
+            this.Info = true;
+            this.Error = true;
         }
+
+        public bool Debug { get; set; }
+
+        public bool Info { get; set; }
+
+        public bool Error { get; set; }
 
         public void DebugWrite(string format, params object[] args)
         {
-            if (!Debug) return;
-            SafeConsoleWrite("DEBUG: " + format, args);
+            if (!this.Debug)
+            {
+                return;
+            }
+
+            this.SafeConsoleWrite("DEBUG: " + format, args);
         }
 
         public void InfoWrite(string format, params object[] args)
         {
-            if (!Info) return;
-            SafeConsoleWrite("INFO: " + format, args);
+            if (!this.Info)
+            {
+                return;
+            }
+
+            this.SafeConsoleWrite("INFO: " + format, args);
         }
 
         public void ErrorWrite(string format, params object[] args)
         {
-            if (!Error) return;
-            SafeConsoleWrite("ERROR: " + format, args);
+            if (!this.Error)
+            {
+                return;
+            }
+
+            this.SafeConsoleWrite("ERROR: " + format, args);
         }
 
         public void SafeConsoleWrite(string format, params object[] args)

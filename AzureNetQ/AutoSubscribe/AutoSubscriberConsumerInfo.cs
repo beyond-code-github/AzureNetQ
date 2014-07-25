@@ -15,9 +15,9 @@ namespace AzureNetQ.AutoSubscribe
             Preconditions.CheckNotNull(interfaceType, "interfaceType");
             Preconditions.CheckNotNull(messageType, "messageType");
 
-            ConcreteType = concreteType;
-            InterfaceType = interfaceType;
-            MessageType = messageType;
+            this.ConcreteType = concreteType;
+            this.InterfaceType = interfaceType;
+            this.MessageType = messageType;
         }
     }
 }

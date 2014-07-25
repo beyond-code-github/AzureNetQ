@@ -1,20 +1,17 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Threading.Tasks;
-using AzureNetQ.Consumer;
-
-namespace AzureNetQ.Producer
+﻿namespace AzureNetQ.Producer
 {
+    using System;
+    using System.Collections.Concurrent;
+    using System.Threading.Tasks;
+
+    using AzureNetQ.Consumer;
+
     using Microsoft.ServiceBus.Messaging;
 
     public class SendReceive : ISendReceive
     {
         private readonly ConcurrentDictionary<string, QueueClient> declaredQueues = new ConcurrentDictionary<string, QueueClient>(); 
-
-        public SendReceive()
-        {
-        }
-
+        
         public void Send<T>(string queue, T message)
             where T : class
         {
@@ -30,7 +27,7 @@ namespace AzureNetQ.Producer
             Preconditions.CheckNotNull(queue, "queue");
             Preconditions.CheckNotNull(onMessage, "onMessage");
 
-            return Receive<T>(queue, message => TaskHelpers.ExecuteSynchronously(() => onMessage(message)));
+            return this.Receive<T>(queue, message => TaskHelpers.ExecuteSynchronously(() => onMessage(message)));
         }
 
         public IDisposable Receive<T>(string queue, Func<T, Task> onMessage)

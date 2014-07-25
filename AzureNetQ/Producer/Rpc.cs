@@ -12,6 +12,12 @@
     /// </summary>
     public class Rpc : IRpc
     {
+        private const string ReplyToKey = "ReplyTo";
+
+        private const string IsFaultedKey = "IsFaulted";
+
+        private const string ExceptionMessageKey = "ExceptionMessage";
+
         private readonly IConventions conventions;
 
         private readonly IAzureAdvancedBus advancedBus;
@@ -25,12 +31,6 @@
         private readonly ConcurrentDictionary<string, ResponseAction> responseActions = new ConcurrentDictionary<string, ResponseAction>();
 
         private readonly TimeSpan disablePeriodicSignaling = TimeSpan.FromMilliseconds(-1);
-
-        private const string ReplyToKey = "ReplyTo";
-
-        private const string IsFaultedKey = "IsFaulted";
-
-        private const string ExceptionMessageKey = "ExceptionMessage";
 
         public Rpc(IConventions conventions, IAzureAdvancedBus advancedBus, IConnectionConfiguration configuration, ISerializer serializer)
         {

@@ -1,8 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-
-namespace AzureNetQ.Producer
+﻿namespace AzureNetQ.Producer
 {
+    using System;
+    using System.Threading.Tasks;
+
     /// <summary>
     /// An RPC style request-response pattern
     /// </summary>

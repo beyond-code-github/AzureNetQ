@@ -1,8 +1,8 @@
-using System;
-using System.Threading.Tasks;
-
 namespace AzureNetQ.AutoSubscribe
 {
+    using System;
+    using System.Threading.Tasks;
+
     public class DefaultAutoSubscriberMessageDispatcher : IAutoSubscriberMessageDispatcher
     {
         public void Dispatch<TMessage, TConsumer>(TMessage message) 

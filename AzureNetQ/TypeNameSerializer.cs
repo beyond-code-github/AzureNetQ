@@ -1,7 +1,7 @@
-using System;
-
 namespace AzureNetQ
 {
+    using System;
+
     public interface ITypeNameSerializer
     {
         string Serialize(Type type);

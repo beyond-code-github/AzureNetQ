@@ -12,8 +12,6 @@ namespace AzureNetQ
 
     public delegate string ErrorQueueNameConvention();
 
-    public delegate string ErrorExchangeNameConvention(MessageReceivedInfo info);
-
     public delegate string RpcExchangeNameConvention();
 
     public delegate string RpcReturnQueueNamingConvention();

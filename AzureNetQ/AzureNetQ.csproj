@@ -51,7 +51,7 @@
       <HintPath>..\packages\ServiceBus.v1_1.1.0.3.0\lib\net40-full\Microsoft.ServiceBus.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.WindowsAzure.Configuration, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.WindowsAzure.ConfigurationManager.2.0.3\lib\net40\Microsoft.WindowsAzure.Configuration.dll</HintPath>
+      <HintPath>..\packages\Microsoft.WindowsAzure.ConfigurationManager.2.0.0.0\lib\net40\Microsoft.WindowsAzure.Configuration.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -76,13 +76,9 @@
     <Compile Include="AzureBusFactory.cs" />
     <Compile Include="AzureNetQSettings.cs" />
     <Compile Include="Consumer\IConsumerConfiguration.cs" />
-    <Compile Include="Consumer\IHandlerRegistration.cs" />
     <Compile Include="Consumer\IReceiveRegistration.cs" />
-    <Compile Include="Consumer\ConsumerDispatcher.cs" />
-    <Compile Include="Consumer\ConsumerDispatcherFactory.cs" />
     <Compile Include="AutoSubscribe\AutoSubscriberConsumerInfo.cs" />
     <Compile Include="Conventions.cs" />
-    <Compile Include="CorrelationIdGenerator.cs" />
     <Compile Include="AutoSubscribe\DefaultAutoSubscriberMessageDispatcher.cs" />
     <Compile Include="Delegates.cs" />
     <Compile Include="AzureNetQException.cs" />
@@ -94,14 +90,12 @@
     <Compile Include="Consumer\IConsumerDispatcherFactory.cs" />
     <Compile Include="IAzureNetQLogger.cs" />
     <Compile Include="IConnectionConfiguration.cs" />
-    <Compile Include="IMessage.cs" />
     <Compile Include="AutoSubscribe\IAutoSubscriberMessageDispatcher.cs" />
     <Compile Include="ISerializer.cs" />
     <Compile Include="JsonSerializer.cs" />
     <Compile Include="Loggers\ConsoleLogger.cs" />
     <Compile Include="Loggers\DelegateLogger.cs" />
     <Compile Include="Loggers\NullLogger.cs" />
-    <Compile Include="MessageReceivedInfo.cs" />
     <Compile Include="Producer\IRpc.cs" />
     <Compile Include="Producer\ISendReceive.cs" />
     <Compile Include="Producer\ResponseAction.cs" />

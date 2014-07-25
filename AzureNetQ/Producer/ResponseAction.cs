@@ -1,7 +1,8 @@
 ﻿namespace AzureNetQ.Producer
 {
-    using Microsoft.ServiceBus.Messaging;
     using System;
+
+    using Microsoft.ServiceBus.Messaging;
 
     internal class ResponseAction
     {

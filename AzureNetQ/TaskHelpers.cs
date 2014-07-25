@@ -1,8 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-
-namespace AzureNetQ
+﻿namespace AzureNetQ
 {
+    using System;
+    using System.Threading.Tasks;
+
     public static class TaskHelpers
     {
         public static Task ExecuteSynchronously(Action action)
@@ -21,6 +21,8 @@ namespace AzureNetQ
             return tcs.Task;
         }
 
-        private struct NullStruct{}
+        private struct NullStruct
+        {
+        }
     }
 }

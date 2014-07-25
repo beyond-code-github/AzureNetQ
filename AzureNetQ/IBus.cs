@@ -81,7 +81,5 @@ namespace AzureNetQ
             where T : class;
 
         IDisposable Receive(string queue, Action<IReceiveRegistration> addHandlers);
-
-        void Dispose();
     }
 }
