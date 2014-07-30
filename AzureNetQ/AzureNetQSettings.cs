@@ -4,6 +4,7 @@
 
     using AzureNetQ.Loggers;
     using AzureNetQ.Producer;
+    using AzureNetQ.Consumer;
 
     public class AzureNetQSettings
     {
@@ -11,7 +12,6 @@
         {
             this.Logger = () => new NullLogger();
             this.ExceptionReporter = () => new NullExceptionReporter();
-            this.SendAndReceive = () => new SendReceive();
             this.Conventions = () => new Conventions(new TypeNameSerializer());
             this.ConnectionConfiguration = new ConnectionConfiguration();
             this.Serializer = () => new JsonSerializer(new TypeNameSerializer());
@@ -28,6 +28,15 @@
                     this.Serializer(),
                     this.Logger(),
                     this.ExceptionReporter());
+
+            this.SendAndReceive = 
+                () => 
+                    new SendReceive(
+                        this.AzureAdvancedBus.Value, 
+                        this.ConnectionConfiguration,
+                        new HandlerCollectionFactory(this.Logger()),
+                        new TypeNameSerializer(),
+                        this.Serializer());
         }
 
         public Func<IExceptionReporter> ExceptionReporter { get; set; }
