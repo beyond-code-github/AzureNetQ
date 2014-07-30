@@ -35,19 +35,42 @@
         /// </summary>
         public IAutoSubscriberMessageDispatcher AutoSubscriberMessageDispatcher { get; set; }
 
+        public virtual void Subscribe(
+            Assembly assembly)
+        {
+            this.Subscribe(assembly, x => { });
+        }
+
+        public virtual void Subscribe(
+            Assembly assembly, Action<IAutoSubscriptionConfiguration> configuration)
+        {
+            this.Subscribe(new List<Assembly> { assembly }, configuration);
+        }
+
+        public virtual void Subscribe(
+            List<Assembly> assemblies)
+        {
+            this.Subscribe(assemblies, x => { });
+        }
+
         /// <summary>
         /// Registers all consumers in passed assembly. The actual Subscriber instances is
         /// created using <seealso cref="AutoSubscriberMessageDispatcher"/>.
         /// </summary>
         /// <param name="assemblies">The assembleis to scan for consumers.</param>
-        public virtual void Subscribe(params Assembly[] assemblies)
+        /// <param name="configuration"></param>
+        public virtual void Subscribe(List<Assembly> assemblies, Action<IAutoSubscriptionConfiguration> configuration)
         {
             Preconditions.CheckAny(assemblies, "assemblies", "No assemblies specified.");
+
+            var autoSubscriptionConfiguration = new AutoSubscriptionConfiguration();
+            configuration(autoSubscriptionConfiguration);
 
             var genericBusSubscribeMethod = this.GetSubscribeMethodOfBus("Subscribe", typeof(Action<>));
             var subscriptionInfos = this.GetConsumerInfos(assemblies.SelectMany(a => a.GetTypes()), typeof(IConsume<>));
 
             this.InvokeMethods(
+                autoSubscriptionConfiguration,
                 subscriptionInfos,
                 DispatchMethodName,
                 genericBusSubscribeMethod,
@@ -57,10 +80,29 @@
             var responderInfos = this.GetResponderInfos(assemblies.SelectMany(a => a.GetTypes()), typeof(IRespond<,>));
 
             this.InvokeMethods(
+                autoSubscriptionConfiguration,
                 responderInfos,
                 HandleMethodName,
                 genericBusRespondMethod,
                 (messageType, responseType) => typeof(Func<,>).MakeGenericType(messageType, responseType));
+        }
+
+        public virtual void SubscribeAsync(
+            Assembly assembly)
+        {
+            this.SubscribeAsync(assembly, x => { });
+        }
+
+        public virtual void SubscribeAsync(
+            Assembly assembly, Action<IAutoSubscriptionConfiguration> configuration)
+        {
+            this.SubscribeAsync(new List<Assembly> { assembly }, configuration);
+        }
+
+        public virtual void SubscribeAsync(
+            List<Assembly> assemblies)
+        {
+            this.SubscribeAsync(assemblies, x => { });
         }
 
         /// <summary>
@@ -68,9 +110,13 @@
         /// created using <seealso cref="AutoSubscriberMessageDispatcher"/>.
         /// </summary>
         /// <param name="assemblies">The assembleis to scan for consumers.</param>
-        public virtual void SubscribeAsync(params Assembly[] assemblies)
+        /// <param name="configuration"></param>
+        public virtual void SubscribeAsync(List<Assembly> assemblies, Action<IAutoSubscriptionConfiguration> configuration)
         {
             Preconditions.CheckAny(assemblies, "assemblies", "No assemblies specified.");
+
+            var autoSubscriptionConfiguration = new AutoSubscriptionConfiguration();
+            configuration(autoSubscriptionConfiguration);
 
             var genericBusSubscribeMethod = this.GetSubscribeMethodOfBus("SubscribeAsync", typeof(Func<,>));
             var consumerInfos = this.GetConsumerInfos(assemblies.SelectMany(a => a.GetTypes()), typeof(IConsumeAsync<>));
@@ -78,6 +124,7 @@
                 messageType => typeof(Func<,>).MakeGenericType(messageType, typeof(Task));
 
             this.InvokeMethods(
+                autoSubscriptionConfiguration,
                 consumerInfos,
                 DispatchAsyncMethodName,
                 genericBusSubscribeMethod,
@@ -89,13 +136,19 @@
                 (messageType, responseType) => typeof(Func<,>).MakeGenericType(messageType, typeof(Task<>).MakeGenericType(responseType));
 
             this.InvokeMethods(
+                autoSubscriptionConfiguration,
                responderInfos,
                HandleAsyncMethodName,
                genericBusRespondMethod,
                subscriberTypeFromMessageAndResponseTypeDelegate);
         }
 
-        protected void InvokeMethods(IEnumerable<KeyValuePair<Type, AutoSubscriberConsumerInfo[]>> subscriptionInfos, string dispatchName, MethodInfo genericBusSubscribeMethod, Func<Type, Type> subscriberTypeFromMessageTypeDelegate)
+        protected void InvokeMethods(
+            AutoSubscriptionConfiguration autoSubscriptionConfiguration,
+            IEnumerable<KeyValuePair<Type, AutoSubscriberConsumerInfo[]>> subscriptionInfos,
+            string dispatchName,
+            MethodInfo genericBusSubscribeMethod,
+            Func<Type, Type> subscriberTypeFromMessageTypeDelegate)
         {
             foreach (var kv in subscriptionInfos)
             {
@@ -106,21 +159,28 @@
                                                            .GetMethod(dispatchName, BindingFlags.Instance | BindingFlags.Public)
                                                            .MakeGenericMethod(subscriptionInfo.MessageType, subscriptionInfo.ConcreteType);
 
-                    var configuration = new Action<ISubscriptionConfiguration>(c => { });
-
+                    var configurationActions = new List<Action<ISubscriptionConfiguration>>();
                     var subscriptionAttribute = this.GetSubscriptionAttribute(subscriptionInfo);
                     if (subscriptionAttribute != null)
                     {
-                        configuration = c => c.WithSubscription(subscriptionAttribute.Name);
+                        configurationActions.Add(c => c.WithSubscription(subscriptionAttribute.Name));
                     }
 
                     var readAndDeleteAttribute = this.GetReadAndDeleteAttribute(subscriptionInfo);
                     if (readAndDeleteAttribute != null)
                     {
-                        configuration = c => c.InReadAndDeleteMode();
+                        configurationActions.Add(c => c.InReadAndDeleteMode());
                     }
 
-                    var dispatchDelegate = Delegate.CreateDelegate(subscriberTypeFromMessageTypeDelegate(subscriptionInfo.MessageType), this.AutoSubscriberMessageDispatcher, dispatchMethod);
+                    var configuration =
+                        new Action<ISubscriptionConfiguration>(c => configurationActions.ForEach(o => o(c)));
+                    
+                    var dispatchDelegate =
+                        Delegate.CreateDelegate(
+                            subscriberTypeFromMessageTypeDelegate(subscriptionInfo.MessageType),
+                            this.AutoSubscriberMessageDispatcher,
+                            dispatchMethod);
+                            
                     var busSubscribeMethod = genericBusSubscribeMethod.MakeGenericMethod(subscriptionInfo.MessageType);
 
                     busSubscribeMethod.Invoke(this.Bus, new object[] { dispatchDelegate, configuration });
@@ -141,6 +201,7 @@
         }
 
         protected void InvokeMethods(
+            AutoSubscriptionConfiguration autoSubscriptionConfiguration,
             IEnumerable<KeyValuePair<Type, AutoSubscriberResponderInfo[]>> subscriptionInfos,
             string handlerName,
             MethodInfo genericBusRespondMethod,
@@ -150,6 +211,12 @@
             {
                 foreach (var subscriptionInfo in kv.Value)
                 {
+                    var configuration = new Action<IRespondConfiguration>(c => { });
+                    if (autoSubscriptionConfiguration.AffinityResolver != null)
+                    {
+                        configuration = c => c.WithAffinityResolver(autoSubscriptionConfiguration.AffinityResolver);
+                    }
+
                     var handleMethod =
                         this.AutoSubscriberMessageDispatcher.GetType()
                             .GetMethod(handlerName, BindingFlags.Instance | BindingFlags.Public)
@@ -170,7 +237,7 @@
                         subscriptionInfo.MessageType,
                         subscriptionInfo.ResponseType);
 
-                    busRespondMethod.Invoke(this.Bus, new object[] { handleDelegate });
+                    busRespondMethod.Invoke(this.Bus, new object[] { handleDelegate, configuration });
                 }
             }
         }
@@ -182,20 +249,29 @@
 
         protected virtual MethodInfo GetSubscribeMethodOfBus(string method, Type paramType)
         {
-            return this.Bus.GetType().GetMethods()
+            return
+                this.Bus.GetType()
+                    .GetMethods()
                 .Where(m => m.Name == method)
                 .Select(m => new { Method = m, Params = m.GetParameters() })
-                .Single(m => m.Params.Length == 2
-                    && m.Params[0].ParameterType.GetGenericTypeDefinition() == paramType
-                    && m.Params[1].ParameterType == typeof(Action<ISubscriptionConfiguration>)).Method;
+                    .Single(
+                        m =>
+                        m.Params.Length == 2 && m.Params[0].ParameterType.GetGenericTypeDefinition() == paramType
+                        && m.Params[1].ParameterType == typeof(Action<ISubscriptionConfiguration>))
+                    .Method;
         }
 
         protected virtual MethodInfo GetRespondMethodOfBus(string method, Type paramType)
         {
-            return this.Bus.GetType().GetMethods()
+            return
+                this.Bus.GetType()
+                    .GetMethods()
                 .Where(m => m.Name == method)
                 .Select(m => new { Method = m, Params = m.GetParameters() })
-                .Single(m => m.Params.Length == 1 && m.Params[0].ParameterType.GetGenericTypeDefinition() == paramType)
+                    .Single(
+                        m =>
+                        m.Params.Length == 2 && m.Params[0].ParameterType.GetGenericTypeDefinition() == paramType
+                        && m.Params[1].ParameterType == typeof(Action<IRespondConfiguration>))
                 .Method;
         }
 

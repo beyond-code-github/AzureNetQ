@@ -105,6 +105,10 @@
                             description.AutoDeleteOnIdle = TimeSpan.FromMinutes(5);
                         }
 
+                        description.DefaultMessageTimeToLive = TimeSpan.FromDays(5);
+                        description.EnableDeadLetteringOnMessageExpiration = true;
+                        description.LockDuration = TimeSpan.FromSeconds(15);
+
                         logger.DebugWrite("Declared Queue: '{0}'", name);
                         namespaceManager.CreateQueue(description);
                     }
@@ -146,21 +150,34 @@
                             var description = new SubscriptionDescription(topicClient.Path, subscriptionId)
                                                   {
                                                       MaxDeliveryCount = maxDeliveryCount,
+                                                      DefaultMessageTimeToLive = TimeSpan.FromDays(5),
+                                                      EnableDeadLetteringOnMessageExpiration = true,
+                                                      LockDuration = TimeSpan.FromMinutes(1)
                                                   };
-
+                            
                             if (topicNames.Any())
                             {
                                 var expression = string.Join(
                                     " OR ",
                                     topicNames.Select(
                                         o => string.Format("user.topic LIKE '{0}'", TransformWildcards(o))));
-
+                                
                                 var filter = new SqlFilter(expression);
                                 namespaceManager.CreateSubscription(description, filter);
+
+                                logger.DebugWrite(
+                                    "Declared Subscription: '{0}' on Topic {1} with filter {2}",
+                                    subscription,
+                                    topicClient.Path,
+                                    filter);
                             }
                             else
                             {
                                 namespaceManager.CreateSubscription(description);
+                                logger.DebugWrite(
+                                    "Declared Subscription: '{0}' on Topic {1}",
+                                    subscription,
+                                    topicClient.Path);
                             }
                         }
 

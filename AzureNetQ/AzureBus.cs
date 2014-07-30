@@ -1,6 +1,8 @@
 namespace AzureNetQ
 {
     using System;
+    using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
 
     using AzureNetQ.Consumer;
@@ -25,6 +27,8 @@ namespace AzureNetQ
 
         private readonly ISerializer serializer;
 
+        private readonly IExceptionHandler exceptionHandler;
+
         public AzureBus(
             IAzureNetQLogger logger,
             IConventions conventions,
@@ -32,7 +36,8 @@ namespace AzureNetQ
             ISendReceive sendReceive,
             IAzureAdvancedBus advancedBus,
             IConnectionConfiguration connectionConfiguration,
-            ISerializer serializer)
+            ISerializer serializer,
+            IExceptionReporter exceptionReporter)
         {
             Preconditions.CheckNotNull(logger, "logger");
             Preconditions.CheckNotNull(conventions, "conventions");
@@ -41,6 +46,7 @@ namespace AzureNetQ
             Preconditions.CheckNotNull(advancedBus, "advancedBus");
             Preconditions.CheckNotNull(connectionConfiguration, "connectionConfiguration");
             Preconditions.CheckNotNull(serializer, "serializer");
+            Preconditions.CheckNotNull(exceptionReporter, "exceptionReporter");
 
             this.logger = logger;
             this.conventions = conventions;
@@ -49,6 +55,7 @@ namespace AzureNetQ
             this.advancedBus = advancedBus;
             this.connectionConfiguration = connectionConfiguration;
             this.serializer = serializer;
+            this.exceptionHandler = new ExceptionHandler(exceptionReporter);
         }
 
         public IAzureNetQLogger Logger
@@ -209,6 +216,7 @@ namespace AzureNetQ
                     azureNetQMessage.MessageId = configuration.MessageId;
                 }
 
+                this.InfoWrite(queueName, azureNetQMessage.MessageId, string.Format("Publishing message: {0}", content));
                 return queue.SendAsync(azureNetQMessage);
             }
 
@@ -222,7 +230,8 @@ namespace AzureNetQ
             this.Subscribe(onMessage, x => { });
         }
 
-        public virtual void Subscribe<T>(Action<T> onMessage, Action<ISubscriptionConfiguration> configure) where T : class
+        public virtual void Subscribe<T>(Action<T> onMessage, Action<ISubscriptionConfiguration> configure)
+            where T : class
         {
             Preconditions.CheckNotNull(onMessage, "onMessage");
             Preconditions.CheckNotNull(configure, "configure");
@@ -268,14 +277,77 @@ namespace AzureNetQ
                 configuration.RequiresDuplicateDetection,
                 configuration.MaxDeliveryCount);
 
+            var onMessageOptions = new OnMessageOptions
+                                       {
+                                           AutoComplete = false,
+                                           MaxConcurrentCalls = this.connectionConfiguration.MaxConcurrentCalls
+                                       };
+
+            onMessageOptions.ExceptionReceived += this.exceptionHandler.ExceptionReceived;
+
             subscriptionClient.OnMessageAsync(
                 message =>
                 {
-                    var content = message.GetBody<string>();
-                    var messageBody = serializer.StringToMessage<T>(content);
-                    return onMessage(messageBody);
+                    this.InfoWrite(queueName, message.MessageId, string.Format("Received message"));
+
+                    try
+                    {
+                        var content = message.GetBody<string>();
+                        var messageBody = serializer.StringToMessage<T>(content);
+
+                        // Renew message lock every 30 seconds
+                        var timer = new Timer(message.KeepLockAlive());
+                        timer.Change(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+
+                        return onMessage(messageBody).ContinueWith(
+                            o =>
+                            {
+                                timer.Dispose();
+
+                                if (!o.IsFaulted && !o.IsCanceled)
+                                {
+                                    this.InfoWrite(
+                                        queueName,
+                                        message.MessageId,
+                                        string.Format("Task completed succesfully"));
+
+                                    return message.CompleteAsync();
+                                }
+
+                                if (o.IsFaulted && o.Exception != null)
+                                {
+                                    var ex = o.Exception.Flatten();
+                                    var exceptionMessage = ex.InnerExceptions.First().Message;
+
+                                    this.InfoWrite(
+                                        queueName,
+                                        message.MessageId,
+                                        string.Format(
+                                            "Task faulted on delivery attempt {1} - {2}",
+                                            message.MessageId,
+                                            message.DeliveryCount,
+                                            exceptionMessage));
+                                }
+                                else
+                                {
+                                    this.InfoWrite(
+                                        queueName,
+                                        message.MessageId,
+                                        string.Format(
+                                            "Task was cancelled or no exception detail was available on delivery attempt {1}",
+                                            message.MessageId,
+                                            message.DeliveryCount));
+                                }
+
+                                return message.AbandonAsync();
+                            });
+                    }
+                    catch (Exception ex)
+                    {
+                        return message.DeadLetterAsync();
+                    }
                 },
-                new OnMessageOptions { AutoComplete = true, MaxConcurrentCalls = this.connectionConfiguration.MaxConcurrentCalls });
+                onMessageOptions);
         }
 
         public TResponse Request<TRequest, TResponse>(TRequest request)
@@ -289,6 +361,17 @@ namespace AzureNetQ
             return task.Result;
         }
 
+        public TResponse Request<TRequest, TResponse>(TRequest request, Action<IRequestConfiguration> configure)
+            where TRequest : class
+            where TResponse : class
+        {
+            Preconditions.CheckNotNull(request, "request");
+
+            var task = this.RequestAsync<TRequest, TResponse>(request, configure);
+            task.Wait();
+            return task.Result;
+        }
+
         public Task<TResponse> RequestAsync<TRequest, TResponse>(TRequest request)
             where TRequest : class
             where TResponse : class
@@ -298,7 +381,23 @@ namespace AzureNetQ
             return this.rpc.Request<TRequest, TResponse>(request);
         }
 
+        public Task<TResponse> RequestAsync<TRequest, TResponse>(TRequest request, Action<IRequestConfiguration> configure)
+            where TRequest : class
+            where TResponse : class
+        {
+            Preconditions.CheckNotNull(request, "request");
+
+            return this.rpc.Request<TRequest, TResponse>(request, configure);
+        }
+
         public virtual void Respond<TRequest, TResponse>(Func<TRequest, TResponse> responder)
+            where TRequest : class
+            where TResponse : class
+        {
+            this.Respond(responder, x => { });
+        }
+
+        public virtual void Respond<TRequest, TResponse>(Func<TRequest, TResponse> responder, Action<IRespondConfiguration> configure)
             where TRequest : class
             where TResponse : class
         {
@@ -307,16 +406,23 @@ namespace AzureNetQ
             Func<TRequest, Task<TResponse>> taskResponder =
                 request => Task<TResponse>.Factory.StartNew(_ => responder(request), null);
 
-            RespondAsync(taskResponder);
+            RespondAsync(taskResponder, configure);
         }
 
         public virtual void RespondAsync<TRequest, TResponse>(Func<TRequest, Task<TResponse>> responder)
             where TRequest : class
             where TResponse : class
         {
+            this.RespondAsync(responder, x => { });
+        }
+
+        public virtual void RespondAsync<TRequest, TResponse>(Func<TRequest, Task<TResponse>> responder, Action<IRespondConfiguration> configure)
+            where TRequest : class
+            where TResponse : class
+        {
             Preconditions.CheckNotNull(responder, "responder");
 
-            this.rpc.Respond(responder);
+            this.rpc.Respond(responder, configure);
         }
 
         public void Send<T>(string queue, T message)
@@ -345,6 +451,11 @@ namespace AzureNetQ
         public virtual void Dispose()
         {
             // throw new NotImplementedException();
+        }
+
+        private void InfoWrite(string queueName, string messageId, string logMessage)
+        {
+            this.logger.InfoWrite("{0} - {1}: {2}", queueName, messageId, logMessage);
         }
     }
 }

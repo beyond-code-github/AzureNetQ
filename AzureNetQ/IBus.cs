@@ -59,7 +59,15 @@ namespace AzureNetQ
             where TRequest : class
             where TResponse : class;
 
+        TResponse Request<TRequest, TResponse>(TRequest request, Action<IRequestConfiguration> configure)
+            where TRequest : class
+            where TResponse : class;
+
         Task<TResponse> RequestAsync<TRequest, TResponse>(TRequest request)
+            where TRequest : class
+            where TResponse : class;
+
+        Task<TResponse> RequestAsync<TRequest, TResponse>(TRequest request, Action<IRequestConfiguration> configure)
             where TRequest : class
             where TResponse : class;
 
@@ -67,7 +75,15 @@ namespace AzureNetQ
             where TRequest : class
             where TResponse : class;
 
+        void Respond<TRequest, TResponse>(Func<TRequest, TResponse> responder, Action<IRespondConfiguration> configure)
+            where TRequest : class
+            where TResponse : class;
+
         void RespondAsync<TRequest, TResponse>(Func<TRequest, Task<TResponse>> responder)
+            where TRequest : class
+            where TResponse : class;
+
+        void RespondAsync<TRequest, TResponse>(Func<TRequest, Task<TResponse>> responder, Action<IRespondConfiguration> configure)
             where TRequest : class
             where TResponse : class;
 

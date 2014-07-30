@@ -11,9 +11,7 @@ namespace AzureNetQ
     public delegate string RpcRoutingKeyNamingConvention(Type messageType);
 
     public delegate string ErrorQueueNameConvention();
-
-    public delegate string RpcExchangeNameConvention();
-
+    
     public delegate string RpcReturnQueueNamingConvention();
 
     public delegate string ConsumerTagConvention();

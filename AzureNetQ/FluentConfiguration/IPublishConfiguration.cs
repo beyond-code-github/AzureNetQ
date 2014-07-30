@@ -8,7 +8,7 @@
     public class PublishConfiguration : IPublishConfiguration
     {
         public string MessageId { get; set; }
-
+        
         public IPublishConfiguration WithMessageId(string messageId)
         {
             this.MessageId = messageId;

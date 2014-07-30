@@ -17,7 +17,7 @@ namespace AzureNetQ.Tests.SimpleService
                     new AzureNetQSettings
                         {
                             Logger = () => new NoDebugLogger(),
-                            ConnectionConfiguration = () => new ConnectionConfiguration
+                            ConnectionConfiguration = new ConnectionConfiguration
                                                                 {
                                                                     PrefetchCount = 200,
                                                                     MaxConcurrentCalls = 100,

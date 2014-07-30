@@ -17,13 +17,12 @@
         public static IBus CreateBus(AzureNetQSettings settings)
         {
             var connectionString = CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString");
-            return CreateBus(connectionString, new AzureNetQSettings());
+            return CreateBus(connectionString, settings);
         }
 
         public static IBus CreateBus(string connectionString, AzureNetQSettings settings)
         {
-            var configuration = settings.ConnectionConfiguration();
-            configuration.ConnectionString = connectionString;
+            settings.ConnectionConfiguration.ConnectionString = connectionString;
 
             return new AzureBus(
                 settings.Logger(),
@@ -31,8 +30,9 @@
                 settings.Rpc(),
                 settings.SendAndReceive(),
                 settings.AzureAdvancedBus.Value,
-                configuration,
-                settings.Serializer());
+                settings.ConnectionConfiguration,
+                settings.Serializer(),
+                settings.ExceptionReporter());
         }
     }
 }

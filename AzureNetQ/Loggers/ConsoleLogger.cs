@@ -24,7 +24,7 @@ namespace AzureNetQ.Loggers
                 return;
             }
 
-            this.SafeConsoleWrite("DEBUG: " + format, args);
+            this.SafeConsoleWrite(DateTime.UtcNow.ToString("dd-MM-yyyy hh:mm:ss") + " DEBUG: " + format, args);
         }
 
         public void InfoWrite(string format, params object[] args)
@@ -34,7 +34,7 @@ namespace AzureNetQ.Loggers
                 return;
             }
 
-            this.SafeConsoleWrite("INFO: " + format, args);
+            this.SafeConsoleWrite(DateTime.UtcNow.ToString("dd-MM-yyyy hh:mm:ss") + " INFO: " + format, args);
         }
 
         public void ErrorWrite(string format, params object[] args)
@@ -44,7 +44,7 @@ namespace AzureNetQ.Loggers
                 return;
             }
 
-            this.SafeConsoleWrite("ERROR: " + format, args);
+            this.SafeConsoleWrite(DateTime.UtcNow.ToString("dd-MM-yyyy hh:mm:ss") + " ERROR: " + format, args);
         }
 
         public void SafeConsoleWrite(string format, params object[] args)

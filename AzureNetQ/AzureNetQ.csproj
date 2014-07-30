@@ -25,6 +25,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -34,6 +35,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Release\AzureNetQ.xml</DocumentationFile>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Staging|AnyCPU'">
     <OutputPath>bin\Staging\</OutputPath>
@@ -44,6 +46,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
@@ -67,6 +70,7 @@
   <ItemGroup>
     <Compile Include="AutoSubscribe\AutoSubscriber.cs" />
     <Compile Include="AutoSubscribe\AutoSubscriberResponderInfo.cs" />
+    <Compile Include="AutoSubscribe\AutoSubscriptionConfiguration.cs" />
     <Compile Include="AutoSubscribe\IRespondAsync.cs" />
     <Compile Include="AutoSubscribe\IRespond.cs" />
     <Compile Include="AutoSubscribe\IConsumeAsync.cs" />
@@ -75,27 +79,30 @@
     <Compile Include="AzureAdvancedBus.cs" />
     <Compile Include="AzureBusFactory.cs" />
     <Compile Include="AzureNetQSettings.cs" />
-    <Compile Include="Consumer\IConsumerConfiguration.cs" />
     <Compile Include="Consumer\IReceiveRegistration.cs" />
     <Compile Include="AutoSubscribe\AutoSubscriberConsumerInfo.cs" />
     <Compile Include="Conventions.cs" />
     <Compile Include="AutoSubscribe\DefaultAutoSubscriberMessageDispatcher.cs" />
     <Compile Include="Delegates.cs" />
     <Compile Include="AzureNetQException.cs" />
+    <Compile Include="ExceptionHandler.cs" />
     <Compile Include="FluentConfiguration\IPublishConfiguration.cs" />
+    <Compile Include="FluentConfiguration\IRequestConfiguration.cs" />
+    <Compile Include="FluentConfiguration\IRespondConfiguration.cs" />
     <Compile Include="FluentConfiguration\ISubscriptionConfiguration.cs" />
     <Compile Include="IBus.cs" />
     <Compile Include="AutoSubscribe\IConsume.cs" />
-    <Compile Include="Consumer\IConsumerDispatcher.cs" />
-    <Compile Include="Consumer\IConsumerDispatcherFactory.cs" />
     <Compile Include="IAzureNetQLogger.cs" />
     <Compile Include="IConnectionConfiguration.cs" />
     <Compile Include="AutoSubscribe\IAutoSubscriberMessageDispatcher.cs" />
     <Compile Include="ISerializer.cs" />
+    <Compile Include="IExceptionReporter.cs" />
     <Compile Include="JsonSerializer.cs" />
     <Compile Include="Loggers\ConsoleLogger.cs" />
     <Compile Include="Loggers\DelegateLogger.cs" />
     <Compile Include="Loggers\NullLogger.cs" />
+    <Compile Include="MessageExtensions.cs" />
+    <Compile Include="NullExceptionReporter.cs" />
     <Compile Include="Producer\IRpc.cs" />
     <Compile Include="Producer\ISendReceive.cs" />
     <Compile Include="Producer\ResponseAction.cs" />
