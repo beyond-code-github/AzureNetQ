@@ -82,7 +82,6 @@
     <Compile Include="BrokeredMessageExtensions.cs" />
     <Compile Include="Consumer\HandlerCollection.cs" />
     <Compile Include="Consumer\HandlerCollectionFactory.cs" />
-    <Compile Include="Consumer\IConsumerConfiguration.cs" />
     <Compile Include="Consumer\IHandlerCollection.cs" />
     <Compile Include="Consumer\IHandlerCollectionFactory.cs" />
     <Compile Include="Consumer\IHandlerRegistration.cs" />
