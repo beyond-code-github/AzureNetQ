@@ -1,11 +1,11 @@
-﻿using Microsoft.ServiceBus.Messaging;
-
-namespace AzureNetQ
+﻿namespace AzureNetQ
 {
+    using Microsoft.ServiceBus.Messaging;
+
     internal static class BrokeredMessageExtensions
     {
-        private static string MessageTypePropertyKey = "Type";
-        
+        private const string MessageTypePropertyKey = "Type";
+
         public static void SetMessageType(this BrokeredMessage message, string typeName)
         {
             Preconditions.CheckNotNull(message, "message");
@@ -19,12 +19,7 @@ namespace AzureNetQ
             Preconditions.CheckNotNull(message, "message");
 
             object prop;
-            if (message.Properties.TryGetValue(MessageTypePropertyKey, out prop))
-            {
-                return prop.ToString();
-            }
-
-            return null;
+            return message.Properties.TryGetValue(MessageTypePropertyKey, out prop) ? prop.ToString() : null;
         }
     }
 }

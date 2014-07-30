@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace AzureNetQ.Consumer
+﻿namespace AzureNetQ.Consumer
 {
     public class HandlerCollectionFactory : IHandlerCollectionFactory
     {
@@ -16,7 +11,7 @@ namespace AzureNetQ.Consumer
 
         public IHandlerCollection CreateHandlerCollection()
         {
-            return new HandlerCollection(logger);
+            return new HandlerCollection(this.logger);
         }
     }
 }

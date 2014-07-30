@@ -1,18 +1,21 @@
-﻿using AzureNetQ.Consumer;
-using System;
-using System.Collections.Concurrent;
-using System.Threading.Tasks;
-
-namespace AzureNetQ.Producer
+﻿namespace AzureNetQ.Producer
 {
+    using System;
+    using System.Collections.Concurrent;
+    using System.Threading.Tasks;
+
+    using AzureNetQ.Consumer;
+
     using Microsoft.ServiceBus.Messaging;
 
     public class SendReceive : ISendReceive
     {
         private readonly IAzureAdvancedBus advancedBus;
-        private readonly IConnectionConfiguration connectionConfiguration;
+
         private readonly IHandlerCollectionFactory handlerCollectionFactory;
+
         private readonly ITypeNameSerializer typeNameSerializer;
+
         private readonly ISerializer serializer;
         
         private readonly ConcurrentDictionary<string, QueueClient> declaredQueues = new ConcurrentDictionary<string, QueueClient>(); 
@@ -31,7 +34,6 @@ namespace AzureNetQ.Producer
             Preconditions.CheckNotNull(serializer, "serializer");
 
             this.advancedBus = advancedBus;
-            this.connectionConfiguration = connectionConfiguration;
             this.handlerCollectionFactory = handlerCollectionFactory;
             this.typeNameSerializer = typeNameSerializer;
             this.serializer = serializer;
@@ -43,11 +45,11 @@ namespace AzureNetQ.Producer
             Preconditions.CheckNotNull(queue, "queue");
             Preconditions.CheckNotNull(message, "message");
 
-            var declaredQueue = DeclareQueue(queue);
+            var declaredQueue = this.DeclareQueue(queue);
 
-            var content = serializer.MessageToString(message);
+            var content = this.serializer.MessageToString(message);
             var queueMessage = new BrokeredMessage(content);
-            queueMessage.SetMessageType(typeNameSerializer.Serialize(typeof(T)));
+            queueMessage.SetMessageType(this.typeNameSerializer.Serialize(typeof(T)));
 
             declaredQueue.Send(queueMessage);
         }
@@ -58,7 +60,7 @@ namespace AzureNetQ.Producer
             Preconditions.CheckNotNull(queue, "queue");
             Preconditions.CheckNotNull(onMessage, "onMessage");
 
-            return Receive<T>(queue, message => TaskHelpers.ExecuteSynchronously(() => onMessage(message)));
+            return this.Receive<T>(queue, message => TaskHelpers.ExecuteSynchronously(() => onMessage(message)));
         }
 
         public IDisposable Receive<T>(string queue, Func<T, Task> onMessage)
@@ -67,8 +69,8 @@ namespace AzureNetQ.Producer
             Preconditions.CheckNotNull(queue, "queue");
             Preconditions.CheckNotNull(onMessage, "onMessage");
 
-            var declaredQueue = DeclareQueue(queue);
-            return Consume(declaredQueue, handlers => handlers.Add<T>((wrapped, info) => onMessage(wrapped.Body)));
+            var declaredQueue = this.DeclareQueue(queue);
+            return this.Consume(declaredQueue, handlers => handlers.Add(onMessage));
         }
 
         public IDisposable Receive(string queue, Action<IReceiveRegistration> addHandlers)
@@ -76,13 +78,13 @@ namespace AzureNetQ.Producer
             Preconditions.CheckNotNull(queue, "queue");
             Preconditions.CheckNotNull(addHandlers, "addHandlers");
 
-            var declaredQueue = DeclareQueue(queue);
-            return Consume(declaredQueue, x => addHandlers(new HandlerAdder(x)));
+            var declaredQueue = this.DeclareQueue(queue);
+            return this.Consume(declaredQueue, x => addHandlers(new HandlerAdder(x)));
         }
 
         private IDisposable Consume(QueueClient declaredQueue, Action<IHandlerRegistration> addHandlers)
         {
-            var handlerCollection = handlerCollectionFactory.CreateHandlerCollection();
+            var handlerCollection = this.handlerCollectionFactory.CreateHandlerCollection();
             addHandlers(handlerCollection);
 
             declaredQueue.OnMessageAsync(queueMessage =>
@@ -92,10 +94,8 @@ namespace AzureNetQ.Producer
 
                 var message = this.serializer.StringToMessage(messageType, messageBody);
                 var handler = handlerCollection.GetHandler(message.GetType());
-                var wrappedMessageType = typeof(WrappedMessage<>).MakeGenericType(message.GetType());
-                dynamic wrappedMessage = Activator.CreateInstance(wrappedMessageType, message, new MessageProperties());
 
-                return handler(wrappedMessage, new MessageReceivedInfo()); // HACK - not using MessageReceievedInfo
+                return handler((dynamic)message);
             });
 
             return null;
@@ -104,11 +104,10 @@ namespace AzureNetQ.Producer
         private QueueClient DeclareQueue(string queueName)
         {
             QueueClient queue = null;
-            declaredQueues.AddOrUpdate(
+            this.declaredQueues.AddOrUpdate(
                 queueName,
-                key => queue = advancedBus.QueueDeclare(queueName),
-                (key, value) => queue = value
-            );
+                key => queue = this.advancedBus.QueueDeclare(queueName),
+                (key, value) => queue = value);
 
             return queue;
         }
@@ -124,26 +123,14 @@ namespace AzureNetQ.Producer
 
             public IReceiveRegistration Add<T>(Func<T, Task> onMessage) where T : class
             {
-                handlerRegistration.Add<T>((message, info) => onMessage(message.Body));
+                this.handlerRegistration.Add(onMessage);
                 return this;
             }
 
             public IReceiveRegistration Add<T>(Action<T> onMessage) where T : class
             {
-                handlerRegistration.Add<T>((message, info) => onMessage(message.Body));
+                this.handlerRegistration.Add(onMessage);
                 return this;
-            }
-        }
-
-        private class WrappedMessage<T> : IMessage<T>
-        {
-            public T Body { get; private set; }
-            public MessageProperties Properties { get; private set; }
-            
-            public WrappedMessage(T body, MessageProperties properties)
-            {
-                Body = body;
-                Properties = properties;
             }
         }
     }

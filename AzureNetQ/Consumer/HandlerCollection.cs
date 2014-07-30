@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace AzureNetQ.Consumer
+﻿namespace AzureNetQ.Consumer
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Threading.Tasks;
+
     public class HandlerCollection : IHandlerCollection
     {
         private readonly IDictionary<Type, object> handlers = new Dictionary<Type, object>();
@@ -16,56 +16,58 @@ namespace AzureNetQ.Consumer
             Preconditions.CheckNotNull(logger, "logger");
 
             this.logger = logger;
-            ThrowOnNoMatchingHandler = true;
+            this.ThrowOnNoMatchingHandler = true;
         }
 
-        public IHandlerRegistration Add<T>(Func<IMessage<T>, MessageReceivedInfo, Task> handler) where T : class
+        public bool ThrowOnNoMatchingHandler { get; set; }
+
+        public IHandlerRegistration Add<T>(Func<T, Task> handler) where T : class
         {
             Preconditions.CheckNotNull(handler, "handler");
 
-            if (handlers.ContainsKey(typeof(T)))
+            if (this.handlers.ContainsKey(typeof(T)))
             {
                 throw new AzureNetQException("There is already a handler for message type '{0}'", typeof(T).Name);
             }
 
-            handlers.Add(typeof(T), handler);
+            this.handlers.Add(typeof(T), handler);
             return this;
         }
 
-        public IHandlerRegistration Add<T>(Action<IMessage<T>, MessageReceivedInfo> handler) where T : class
+        public IHandlerRegistration Add<T>(Action<T> handler) where T : class
         {
             Preconditions.CheckNotNull(handler, "handler");
 
-            Add<T>((message, info) => TaskHelpers.ExecuteSynchronously(() => handler(message, info)));
+            this.Add<T>(message => TaskHelpers.ExecuteSynchronously(() => handler(message)));
             return this;
         }
 
         // NOTE: refactoring tools might suggest this method is never invoked. Ignore them it
         // _is_ invoked by the GetHandler(Type messsageType) method below by reflection.
-        public Func<IMessage<T>, MessageReceivedInfo, Task> GetHandler<T>() where T : class
+        public Func<T, Task> GetHandler<T>() where T : class
         {
             // return (Func<IMessage<T>, MessageReceivedInfo, Task>)GetHandler(typeof(T));
             var messageType = typeof(T);
 
-            if (handlers.ContainsKey(messageType))
+            if (this.handlers.ContainsKey(messageType))
             {
-                return (Func<IMessage<T>, MessageReceivedInfo, Task>)handlers[messageType];
+                return (Func<T, Task>)this.handlers[messageType];
             }
 
             // no exact handler match found, so let's see if we can find a handler that
             // handles a supertype of the consumed message.
-            foreach (var handlerType in handlers.Keys.Where(type => type.IsAssignableFrom(messageType)))
+            foreach (var handlerType in this.handlers.Keys.Where(type => type.IsAssignableFrom(messageType)))
             {
-                return (Func<IMessage<T>, MessageReceivedInfo, Task>)handlers[handlerType];
+                return (Func<T, Task>)this.handlers[handlerType];
             }
 
-            if (ThrowOnNoMatchingHandler)
+            if (this.ThrowOnNoMatchingHandler)
             {
-                logger.ErrorWrite("No handler found for message type {0}", messageType.Name);
+                this.logger.ErrorWrite("No handler found for message type {0}", messageType.Name);
                 throw new AzureNetQException("No handler found for message type {0}", messageType.Name);
             }
 
-            return (message, info) => Task.Factory.StartNew(() => { });
+            return message => Task.Factory.StartNew(() => { });
         }
 
         public dynamic GetHandler(Type messageType)
@@ -73,10 +75,7 @@ namespace AzureNetQ.Consumer
             Preconditions.CheckNotNull(messageType, "messageType");
 
             var getHandlerGenericMethod = GetType().GetMethod("GetHandler", new Type[0]).MakeGenericMethod(messageType);
-
             return getHandlerGenericMethod.Invoke(this, new object[0]);
         }
-
-        public bool ThrowOnNoMatchingHandler { get; set; }
     }
 }
