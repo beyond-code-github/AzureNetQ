@@ -2,15 +2,15 @@
 {
     using System;
 
+    using AzureNetQ.Consumer;
     using AzureNetQ.Loggers;
     using AzureNetQ.Producer;
-    using AzureNetQ.Consumer;
 
     public class AzureNetQSettings
     {
         public AzureNetQSettings()
         {
-            this.Logger = () => new NullLogger();
+            this.Logger = () => new ConsoleLogger();
             this.ExceptionReporter = () => new NullExceptionReporter();
             this.Conventions = () => new Conventions(new TypeNameSerializer());
             this.ConnectionConfiguration = new ConnectionConfiguration();
