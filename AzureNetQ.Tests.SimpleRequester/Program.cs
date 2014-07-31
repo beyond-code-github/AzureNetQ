@@ -1,14 +1,18 @@
-﻿using System;
-using System.Threading;
-using AzureNetQ.Loggers;
-
-namespace AzureNetQ.Tests.SimpleRequester
+﻿namespace AzureNetQ.Tests.SimpleRequester
 {
+    using System;
+    using System.Threading;
+
+    using AzureNetQ.Loggers;
     using AzureNetQ.Tests.Messages;
 
-    class Program
+    public class Program
     {
-        private static readonly IBus bus =
+        private const int PublishIntervalMilliseconds = 20;
+
+        private static readonly object RequestLock = new object();
+
+        private static readonly IBus Bus =
             AzureBusFactory.CreateBus(
                 new AzureNetQSettings
                     {
@@ -20,16 +24,14 @@ namespace AzureNetQ.Tests.SimpleRequester
                             BatchingInterval = TimeSpan.FromMilliseconds(50)
                         }
                     });
-        
-        private static long count = 0;
 
-        private static readonly ILatencyRecorder latencyRecorder = new LatencyRecorder();
-        
-        private const int publishIntervalMilliseconds = 20;
+        private static readonly ILatencyRecorder LatencyRecorder = new LatencyRecorder();
 
-        static void Main(string[] args)
+        private static long count;
+
+        public static void Main(string[] args)
         {
-            var timer = new Timer(OnTimer, null, publishIntervalMilliseconds, publishIntervalMilliseconds);
+            var timer = new Timer(OnTimer, null, PublishIntervalMilliseconds, PublishIntervalMilliseconds);
 
             Console.Out.WriteLine("Timer running, ctrl-C to end");
 
@@ -38,8 +40,8 @@ namespace AzureNetQ.Tests.SimpleRequester
                 Console.Out.WriteLine("Shutting down");
 
                 timer.Dispose();
-                bus.Dispose();
-                latencyRecorder.Dispose();
+                Bus.Dispose();
+                LatencyRecorder.Dispose();
 
                 Console.WriteLine("Shut down complete");
             };
@@ -47,16 +49,14 @@ namespace AzureNetQ.Tests.SimpleRequester
             Thread.Sleep(Timeout.Infinite);
         }
 
-        private static readonly object requestLock = new object();
-
-        static void OnTimer(object state)
+        public static void OnTimer(object state)
         {
             try
             {
-                lock (requestLock)
+                lock (RequestLock)
                 {
-                    Console.WriteLine(string.Format("Sending {0}", count));
-                    bus.RequestAsync<TestAsyncRequestMessage, TestAsyncResponseMessage>(
+                    Console.WriteLine("Sending {0}", count);
+                    Bus.RequestAsync<TestAsyncRequestMessage, TestAsyncResponseMessage>(
                         new TestAsyncRequestMessage
                         {
                             Id = count,
@@ -77,7 +77,7 @@ namespace AzureNetQ.Tests.SimpleRequester
                                     ResponseHandler(t.Result);
                                 });
 
-                    latencyRecorder.RegisterRequest(count);
+                    LatencyRecorder.RegisterRequest(count);
                     count++;
                 }
             }
@@ -87,10 +87,10 @@ namespace AzureNetQ.Tests.SimpleRequester
             }
         }
         
-        static void ResponseHandler(TestAsyncResponseMessage response)
+        public static void ResponseHandler(TestAsyncResponseMessage response)
         {
             Console.WriteLine("Response: {0}", response.Text);
-            latencyRecorder.RegisterResponse(response.Id);
+            LatencyRecorder.RegisterResponse(response.Id);
         }
     }
 
@@ -110,12 +110,12 @@ namespace AzureNetQ.Tests.SimpleRequester
 
         public void ErrorWrite(string format, params object[] args)
         {
-            consoleLogger.ErrorWrite(format, args);
+            this.consoleLogger.ErrorWrite(format, args);
         }
 
         public void ErrorWrite(Exception exception)
         {
-            consoleLogger.ErrorWrite(exception);
+            this.consoleLogger.ErrorWrite(exception);
         }
     }
 }

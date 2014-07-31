@@ -1,16 +1,16 @@
-﻿using System;
-using System.Runtime.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using AzureNetQ.Loggers;
-
-namespace AzureNetQ.Tests.SimpleService
+﻿namespace AzureNetQ.Tests.SimpleService
 {
+    using System;
+    using System.Runtime.Serialization;
+    using System.Threading;
+    using System.Threading.Tasks;
+
+    using AzureNetQ.Loggers;
     using AzureNetQ.Tests.Messages;
 
-    class Program
+    public class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             var bus =
                 AzureBusFactory.CreateBus(
@@ -39,16 +39,6 @@ namespace AzureNetQ.Tests.SimpleService
             Thread.Sleep(Timeout.Infinite);
         }
 
-        private static Task<TestAsyncResponseMessage> HandleAsyncRequest(TestAsyncRequestMessage request)
-        {
-            Console.WriteLine("Handling request: {0}", request.Text);
-
-            var tcs = new TaskCompletionSource<TestAsyncResponseMessage>();
-            tcs.SetResult(new TestAsyncResponseMessage { Id = request.Id, Text = request.Text + " ... completed." });
-
-            return tcs.Task;
-        }
-
         public static TestResponseMessage HandleRequest(TestRequestMessage request)
         {
             Console.WriteLine("Handling request: {0}", request.Text);
@@ -62,11 +52,24 @@ namespace AzureNetQ.Tests.SimpleService
             if (request.CausesExceptionInServer)
             {
                 if (request.ExceptionInServerMessage != null)
+                {
                     throw new SomeRandomException(request.ExceptionInServerMessage);
+                }
+
                 throw new SomeRandomException("Something terrible has just happened!");
             }
 
-            return new TestResponseMessage{ Id = request.Id, Text = request.Text + " all done!" };
+            return new TestResponseMessage { Id = request.Id, Text = request.Text + " all done!" };
+        }
+
+        private static Task<TestAsyncResponseMessage> HandleAsyncRequest(TestAsyncRequestMessage request)
+        {
+            Console.WriteLine("Handling request: {0}", request.Text);
+
+            var tcs = new TaskCompletionSource<TestAsyncResponseMessage>();
+            tcs.SetResult(new TestAsyncResponseMessage { Id = request.Id, Text = request.Text + " ... completed." });
+
+            return tcs.Task;
         }
 
         private static Task<T> RunDelayed<T>(int millisecondsDelay, Func<T> func)
@@ -75,6 +78,7 @@ namespace AzureNetQ.Tests.SimpleService
             {
                 throw new ArgumentNullException("func");
             }
+
             if (millisecondsDelay < 0)
             {
                 throw new ArgumentOutOfRangeException("millisecondsDelay");
@@ -104,20 +108,29 @@ namespace AzureNetQ.Tests.SimpleService
     [Serializable]
     public class SomeRandomException : Exception
     {
-        //
-        // For guidelines regarding the creation of new exception types, see
-        //    http://msdn.microsoft.com/library/default.asp?url=/library/en-us/cpgenref/html/cpconerrorraisinghandlingguidelines.asp
-        // and
-        //    http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dncscol/html/csharp07192001.asp
-        //
+        //// For guidelines regarding the creation of new exception types, see
+        ////    http://msdn.microsoft.com/library/default.asp?url=/library/en-us/cpgenref/html/cpconerrorraisinghandlingguidelines.asp
+        //// and
+        ////    http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dncscol/html/csharp07192001.asp
+        
+        public SomeRandomException()
+        {
+        }
 
-        public SomeRandomException() {}
-        public SomeRandomException(string message) : base(message) {}
-        public SomeRandomException(string message, Exception inner) : base(message, inner) {}
+        public SomeRandomException(string message)
+            : base(message)
+        {
+        }
 
-        protected SomeRandomException(
-            SerializationInfo info,
-            StreamingContext context) : base(info, context) {}
+        public SomeRandomException(string message, Exception inner)
+            : base(message, inner)
+        {
+        }
+
+        protected SomeRandomException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     public class NoDebugLogger : IAzureNetQLogger
@@ -126,22 +139,20 @@ namespace AzureNetQ.Tests.SimpleService
 
         public void DebugWrite(string format, params object[] args)
         {
-            
         }
 
         public void InfoWrite(string format, params object[] args)
         {
-            
         }
 
         public void ErrorWrite(string format, params object[] args)
         {
-            logger.ErrorWrite(format, args);
+            this.logger.ErrorWrite(format, args);
         }
 
         public void ErrorWrite(Exception exception)
         {
-            logger.ErrorWrite(exception);
+            this.logger.ErrorWrite(exception);
         }
     }
 }
