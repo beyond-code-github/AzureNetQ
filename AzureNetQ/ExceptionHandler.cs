@@ -1,11 +1,6 @@
 namespace AzureNetQ
 {
     using Microsoft.ServiceBus.Messaging;
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Text;
-    using System.Threading.Tasks;
 
     public interface IExceptionHandler
     {
@@ -14,16 +9,16 @@ namespace AzureNetQ
 
     public class ExceptionHandler : IExceptionHandler
     {
-        private IExceptionReporter exceptionReporter;
+        private readonly IAzureNetQLogger logger;
 
-        public ExceptionHandler(IExceptionReporter exceptionReporter)
+        public ExceptionHandler(IAzureNetQLogger logger)
         {
-            this.exceptionReporter = exceptionReporter;
+            this.logger = logger;
         }
 
         public void ExceptionReceived(object sender, ExceptionReceivedEventArgs args)
         {
-            this.exceptionReporter.ExceptionReceived(sender, args.Exception);
+            this.logger.ErrorWrite(args.Exception);
         }
     }
 }

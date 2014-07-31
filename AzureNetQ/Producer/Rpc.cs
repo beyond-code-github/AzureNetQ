@@ -1,13 +1,16 @@
 ﻿namespace AzureNetQ.Producer
 {
-    using AzureNetQ.FluentConfiguration;
-    using Microsoft.ServiceBus.Messaging;
-    using Newtonsoft.Json;
     using System;
     using System.Collections.Concurrent;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+
+    using AzureNetQ.FluentConfiguration;
+
+    using Microsoft.ServiceBus.Messaging;
+
+    using Newtonsoft.Json;
 
     /// <summary>
     /// Default implementation of AzureNetQ's request-response pattern
@@ -45,22 +48,20 @@
             IAzureAdvancedBus advancedBus,
             IConnectionConfiguration connectionConfiguration,
             ISerializer serializer,
-            IAzureNetQLogger logger,
-            IExceptionReporter exceptionReporter)
+            IAzureNetQLogger logger)
         {
             Preconditions.CheckNotNull(conventions, "conventions");
             Preconditions.CheckNotNull(advancedBus, "advancedBus");
             Preconditions.CheckNotNull(connectionConfiguration, "configuration");
             Preconditions.CheckNotNull(serializer, "serializer");
             Preconditions.CheckNotNull(logger, "logger");
-            Preconditions.CheckNotNull(exceptionReporter, "exceptionReporter");
 
             this.conventions = conventions;
             this.advancedBus = advancedBus;
             this.connectionConfiguration = connectionConfiguration;
             this.serializer = serializer;
             this.logger = logger;
-            this.exceptionHandler = new ExceptionHandler(exceptionReporter);
+            this.exceptionHandler = new ExceptionHandler(this.logger);
         }
 
         public Task<TResponse> Request<TRequest, TResponse>(TRequest request)
@@ -217,16 +218,22 @@
                             string.Format("Processing request with matched affinity {0}", messageAffinity));
                     }
 
+                    TRequest messageBody;
                     try
                     {
                         var content = requestMessage.GetBody<string>();
-                        var messageBody = this.serializer.StringToMessage<TRequest>(content);
+                        messageBody = this.serializer.StringToMessage<TRequest>(content);
+                    }
+                    catch (Exception ex)
+                    {
+                        return this.HandleUnexpectedException(routingKey, requestMessage, ex);
+                    }
 
-                        // Renew message lock every 10 seconds
-                        var timer = new Timer(requestMessage.KeepLockAlive());
-                        timer.Change(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+                    // Renew message lock every 10 seconds
+                    var timer = new Timer(requestMessage.KeepLockAlive(this.logger));
+                    timer.Change(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
 
-                        return responder(messageBody).ContinueWith(
+                    return responder(messageBody).ContinueWith(
                             task =>
                             {
                                 timer.Dispose();
@@ -243,12 +250,13 @@
                                         var dummyContent = this.serializer.MessageToString(body);
 
                                         var ex = task.Exception.Flatten();
+                                        var exception = ex.InnerExceptions.First();
                                         var exceptionMessage = ex.InnerExceptions.First().Message;
                                         var serializedException = JsonConvert.SerializeObject(
                                             ex,
                                             Formatting.None);
 
-                                        this.InfoWrite(
+                                        this.ErrorWrite(
                                             routingKey,
                                             requestMessage.MessageId,
                                             string.Format(
@@ -256,17 +264,12 @@
                                                 requestMessage.CorrelationId,
                                                 exceptionMessage));
 
+                                        this.logger.ErrorWrite(exception);
+
                                         var errorResponseMessage = new BrokeredMessage(dummyContent);
                                         errorResponseMessage.Properties.Add(IsFaultedKey, true);
-                                        errorResponseMessage.Properties.Add(
-                                            SerializedExceptionKey,
-                                            JsonConvert.SerializeObject(ex, Formatting.None));
-                                        errorResponseMessage.Properties.Add(
-                                            ExceptionMessageKey,
-                                            exceptionMessage);
-                                        errorResponseMessage.Properties.Add(
-                                            SerializedExceptionKey,
-                                            serializedException);
+                                        errorResponseMessage.Properties.Add(ExceptionMessageKey, exceptionMessage);
+                                        errorResponseMessage.Properties.Add(SerializedExceptionKey, serializedException);
                                         errorResponseMessage.CorrelationId = requestMessage.CorrelationId;
 
                                         return responseQueue.SendAsync(errorResponseMessage);
@@ -289,21 +292,18 @@
                                         requestMessage.CorrelationId));
 
                                 return responseQueue.SendAsync(responseMessage);
-                            }).ContinueWith(o => requestMessage.CompleteAsync());
-                    }
-                    catch (Exception ex)
-                    {
-                        this.InfoWrite(
-                            routingKey,
-                            requestMessage.MessageId,
-                            string.Format(
-                                "Request with correlation id {0} has faulted unexpectedly: {1}",
-                                requestMessage.CorrelationId,
-                                ex.Message));
+                            }).ContinueWith(
+                                o =>
+                                    {
+                                        if (o.IsFaulted && o.Exception != null)
+                                        {
+                                            var ex = o.Exception.Flatten().InnerExceptions.First();
+                                            return this.HandleUnexpectedException(routingKey, requestMessage, ex);
+                                        }
 
-                        // deadletter this message if anything unusual happens
-                        return requestMessage.DeadLetterAsync();
-                    }
+                                        return requestMessage.CompleteAsync();
+                                    });
+                    
                 },
                 onMessageOptions);
 
@@ -336,6 +336,25 @@
             }
 
             return affinityCycle;
+        }
+
+        private Task HandleUnexpectedException(
+            string routingKey,
+            BrokeredMessage requestMessage,
+            Exception ex)
+        {
+            this.ErrorWrite(
+                routingKey,
+                requestMessage.MessageId,
+                string.Format(
+                    "Request with correlation id {0} has faulted unexpectedly: {1}",
+                    requestMessage.CorrelationId,
+                    ex.Message));
+
+            this.logger.ErrorWrite(ex);
+
+            // deadletter this message if anything unusual happens
+            return requestMessage.DeadLetterAsync();
         }
 
         private string SubscribeToResponse<TRequest, TResponse>()
@@ -400,7 +419,10 @@
             var routingKey = this.conventions.RpcRoutingKeyNamingConvention(typeof(TRequest));
             var queue = this.advancedBus.QueueDeclare(routingKey);
 
-            this.InfoWrite(routingKey, requestMessage.MessageId, string.Format("Sending request with correlation id {0}: {1}", correlationId, content));
+            this.InfoWrite(
+                routingKey,
+                requestMessage.MessageId,
+                string.Format("Sending request with correlation id {0}: {1}", correlationId, content));
 
             queue.SendAsync(requestMessage);
         }
@@ -438,6 +460,11 @@
         private void InfoWrite(string queueName, string messageId, string logMessage)
         {
             this.logger.InfoWrite("{0} - {1}: {2}", queueName, messageId, logMessage);
+        }
+
+        private void ErrorWrite(string queueName, string messageId, string logMessage)
+        {
+            this.logger.ErrorWrite("{0} - {1}: {2}", queueName, messageId, logMessage);
         }
     }
 }

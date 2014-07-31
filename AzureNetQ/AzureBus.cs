@@ -36,8 +36,7 @@ namespace AzureNetQ
             ISendReceive sendReceive,
             IAzureAdvancedBus advancedBus,
             IConnectionConfiguration connectionConfiguration,
-            ISerializer serializer,
-            IExceptionReporter exceptionReporter)
+            ISerializer serializer)
         {
             Preconditions.CheckNotNull(logger, "logger");
             Preconditions.CheckNotNull(conventions, "conventions");
@@ -46,7 +45,6 @@ namespace AzureNetQ
             Preconditions.CheckNotNull(advancedBus, "advancedBus");
             Preconditions.CheckNotNull(connectionConfiguration, "connectionConfiguration");
             Preconditions.CheckNotNull(serializer, "serializer");
-            Preconditions.CheckNotNull(exceptionReporter, "exceptionReporter");
 
             this.logger = logger;
             this.conventions = conventions;
@@ -55,7 +53,7 @@ namespace AzureNetQ
             this.advancedBus = advancedBus;
             this.connectionConfiguration = connectionConfiguration;
             this.serializer = serializer;
-            this.exceptionHandler = new ExceptionHandler(exceptionReporter);
+            this.exceptionHandler = new ExceptionHandler(logger);
         }
 
         public IAzureNetQLogger Logger
@@ -296,7 +294,7 @@ namespace AzureNetQ
                         var messageBody = serializer.StringToMessage<T>(content);
 
                         // Renew message lock every 30 seconds
-                        var timer = new Timer(message.KeepLockAlive());
+                        var timer = new Timer(message.KeepLockAlive(this.logger));
                         timer.Change(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 
                         return onMessage(messageBody).ContinueWith(
@@ -323,8 +321,7 @@ namespace AzureNetQ
                                         queueName,
                                         message.MessageId,
                                         string.Format(
-                                            "Task faulted on delivery attempt {1} - {2}",
-                                            message.MessageId,
+                                            "Task faulted on delivery attempt {0} - {1}",
                                             message.DeliveryCount,
                                             exceptionMessage));
                                 }
@@ -334,8 +331,7 @@ namespace AzureNetQ
                                         queueName,
                                         message.MessageId,
                                         string.Format(
-                                            "Task was cancelled or no exception detail was available on delivery attempt {1}",
-                                            message.MessageId,
+                                            "Task was cancelled or no exception detail was available on delivery attempt {0}",
                                             message.DeliveryCount));
                                 }
 

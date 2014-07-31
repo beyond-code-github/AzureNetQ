@@ -18,7 +18,7 @@ namespace AzureNetQ
                    && int.TryParse(message.Properties["Affinity"].ToString(), out messageAffinity);
         }
 
-        public static TimerCallback KeepLockAlive(this BrokeredMessage message)
+        public static TimerCallback KeepLockAlive(this BrokeredMessage message, IAzureNetQLogger logger)
         {
             return state => message.RenewLockAsync().ContinueWith(
                 t =>
@@ -34,7 +34,8 @@ namespace AzureNetQ
                         return;
                     }
 
-                    throw t.Exception;
+                    ((Timer)state).Dispose();
+                    logger.ErrorWrite(exception);
                 });
         }
     }

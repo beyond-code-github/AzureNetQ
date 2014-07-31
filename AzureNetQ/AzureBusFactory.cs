@@ -31,8 +31,7 @@
                 settings.SendAndReceive(),
                 settings.AzureAdvancedBus.Value,
                 settings.ConnectionConfiguration,
-                settings.Serializer(),
-                settings.ExceptionReporter());
+                settings.Serializer());
         }
     }
 }

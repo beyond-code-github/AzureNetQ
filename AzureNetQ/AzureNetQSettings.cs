@@ -11,7 +11,6 @@
         public AzureNetQSettings()
         {
             this.Logger = () => new ConsoleLogger();
-            this.ExceptionReporter = () => new NullExceptionReporter();
             this.Conventions = () => new Conventions(new TypeNameSerializer());
             this.ConnectionConfiguration = new ConnectionConfiguration();
             this.Serializer = () => new JsonSerializer(new TypeNameSerializer());
@@ -26,8 +25,7 @@
                     this.AzureAdvancedBus.Value,
                     this.ConnectionConfiguration,
                     this.Serializer(),
-                    this.Logger(),
-                    this.ExceptionReporter());
+                    this.Logger());
 
             this.SendAndReceive = 
                 () => 
@@ -38,9 +36,7 @@
                         new TypeNameSerializer(),
                         this.Serializer());
         }
-
-        public Func<IExceptionReporter> ExceptionReporter { get; set; }
-
+        
         public Lazy<IAzureAdvancedBus> AzureAdvancedBus { get; set; }
 
         public IConnectionConfiguration ConnectionConfiguration { get; set; }

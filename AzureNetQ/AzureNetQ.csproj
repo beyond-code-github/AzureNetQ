@@ -102,14 +102,12 @@
     <Compile Include="IConnectionConfiguration.cs" />
     <Compile Include="AutoSubscribe\IAutoSubscriberMessageDispatcher.cs" />
     <Compile Include="ISerializer.cs" />
-    <Compile Include="IExceptionReporter.cs" />
     <Compile Include="JsonSerializer.cs" />
     <Compile Include="Loggers\ConsoleLogger.cs" />
     <Compile Include="Loggers\DelegateLogger.cs" />
     <Compile Include="Loggers\NullLogger.cs" />
     <Compile Include="MessageExtensions.cs" />
     <Compile Include="NonGeneric\NonGenericExtensions.cs" />
-    <Compile Include="NullExceptionReporter.cs" />
     <Compile Include="Producer\IRpc.cs" />
     <Compile Include="Producer\ISendReceive.cs" />
     <Compile Include="Producer\ResponseAction.cs" />
