@@ -285,63 +285,67 @@ namespace AzureNetQ
 
             subscriptionClient.OnMessageAsync(
                 message =>
-                {
-                    this.InfoWrite(queueName, message.MessageId, string.Format("Received message"));
+                    {
+                        this.InfoWrite(
+                            queueName,
+                            message.MessageId,
+                            string.Format("Received message on subscription {0}", configuration.Subscription));
 
+                    T messageBody;
                     try
                     {
                         var content = message.GetBody<string>();
-                        var messageBody = serializer.StringToMessage<T>(content);
-
-                        // Renew message lock every 30 seconds
-                        var timer = new Timer(message.KeepLockAlive(this.logger));
-                        timer.Change(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
-
-                        return onMessage(messageBody).ContinueWith(
-                            o =>
-                            {
-                                timer.Dispose();
-
-                                if (!o.IsFaulted && !o.IsCanceled)
-                                {
-                                    this.InfoWrite(
-                                        queueName,
-                                        message.MessageId,
-                                        string.Format("Task completed succesfully"));
-
-                                    return message.CompleteAsync();
-                                }
-
-                                if (o.IsFaulted && o.Exception != null)
-                                {
-                                    var ex = o.Exception.Flatten();
-                                    var exceptionMessage = ex.InnerExceptions.First().Message;
-
-                                    this.InfoWrite(
-                                        queueName,
-                                        message.MessageId,
-                                        string.Format(
-                                            "Task faulted on delivery attempt {0} - {1}",
-                                            message.DeliveryCount,
-                                            exceptionMessage));
-                                }
-                                else
-                                {
-                                    this.InfoWrite(
-                                        queueName,
-                                        message.MessageId,
-                                        string.Format(
-                                            "Task was cancelled or no exception detail was available on delivery attempt {0}",
-                                            message.DeliveryCount));
-                                }
-
-                                return message.AbandonAsync();
-                            });
+                        messageBody = serializer.StringToMessage<T>(content);
                     }
                     catch (Exception ex)
                     {
-                        return message.DeadLetterAsync();
+                        return this.HandleSerialisationException(queueName, configuration.Subscription, message, ex);
                     }
+
+                    // Renew message lock every 30 seconds
+                    var timer = new Timer(message.KeepLockAlive(this.logger));
+                    timer.Change(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+
+                    return onMessage(messageBody).ContinueWith(
+                        o =>
+                        {
+                            timer.Dispose();
+
+                            if (!o.IsFaulted && !o.IsCanceled)
+                            {
+                                this.InfoWrite(
+                                    queueName,
+                                    message.MessageId,
+                                    string.Format("Task completed succesfully"));
+
+                                return message.CompleteAsync();
+                            }
+
+                            if (o.IsFaulted && o.Exception != null)
+                            {
+                                var ex = o.Exception.Flatten().InnerExceptions.First();
+                                
+                                this.ErrorWrite(
+                                    queueName,
+                                    message.MessageId,
+                                    string.Format(
+                                        "Task faulted on delivery attempt {0} - {1}",
+                                        message.DeliveryCount,
+                                        ex.Message));
+
+                                this.logger.ErrorWrite(ex);
+                                return message.AbandonAsync();
+                            }
+                            
+                            this.ErrorWrite(
+                                queueName,
+                                message.MessageId,
+                                string.Format(
+                                    "Task was cancelled or no exception detail was available on delivery attempt {0}",
+                                    message.DeliveryCount));
+
+                            return message.AbandonAsync();
+                        });
                 },
                 onMessageOptions);
         }
@@ -452,6 +456,32 @@ namespace AzureNetQ
         private void InfoWrite(string queueName, string messageId, string logMessage)
         {
             this.logger.InfoWrite("{0} - {1}: {2}", queueName, messageId, logMessage);
+        }
+
+        private void ErrorWrite(string queueName, string messageId, string logMessage)
+        {
+            this.logger.ErrorWrite("{0} - {1}: {2}", queueName, messageId, logMessage);
+        }
+
+        private Task HandleSerialisationException(
+            string routingKey,
+            string subscription,
+            BrokeredMessage requestMessage,
+            Exception ex)
+        {
+            this.ErrorWrite(
+                routingKey,
+                requestMessage.MessageId,
+                string.Format(
+                    "Handler for subscription {0} has faulted unexpectedly on delivery count {1}: {2}",
+                    subscription,
+                    requestMessage.DeliveryCount,
+                    ex.Message));
+
+            this.logger.ErrorWrite(ex);
+
+            // deadletter this message if anything unusual happens
+            return requestMessage.DeadLetterAsync();
         }
     }
 }
