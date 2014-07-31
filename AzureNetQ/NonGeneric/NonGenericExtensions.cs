@@ -27,28 +27,24 @@
             return SubscribeAsync(bus, messageType, asyncOnMessage, configure);
         }
 
-        public static IDisposable SubscribeAsync(
-            this IBus bus,
-            Type messageType,
-            Func<object, Task> onMessage)
+        public static IDisposable SubscribeAsync(this IBus bus, Type messageType, Func<object, Task> onMessage)
         {
             return SubscribeAsync(bus, messageType, onMessage, configuration => { });
         }
 
-        public static IDisposable SubscribeAsync(
-            this IBus bus,
-            Type messageType,
-            Func<object, Task> onMessage,
-            Action<ISubscriptionConfiguration> configure)
+    public static IDisposable SubscribeAsync(
+        this IBus bus,
+        Type messageType,
+        Func<object, Task> onMessage,
+        Action<ISubscriptionConfiguration> configure)
         {
             Preconditions.CheckNotNull(bus, "bus");
             Preconditions.CheckNotNull(messageType, "messageType");
             Preconditions.CheckNotNull(onMessage, "onMessage");
             Preconditions.CheckNotNull(configure, "configure");
 
-            var subscribeMethodOpen = typeof(IBus)
-                .GetMethods()
-                .SingleOrDefault(x => x.Name == "SubscribeAsync" && HasCorrectParameters(x));
+            var subscribeMethodOpen =
+                typeof(IBus).GetMethods().SingleOrDefault(x => x.Name == "SubscribeAsync" && HasCorrectParameters(x));
 
             if (subscribeMethodOpen == null)
             {
@@ -58,7 +54,7 @@
             var subscribeMethod = subscribeMethodOpen.MakeGenericMethod(messageType);
             return (IDisposable)subscribeMethod.Invoke(bus, new object[] { onMessage, configure });
         }
-        
+
         private static bool HasCorrectParameters(MethodInfo methodInfo)
         {
             var parameters = methodInfo.GetParameters();
