@@ -1,11 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30501.0
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureNetQ", "AzureNetQ\AzureNetQ.csproj", "{B8DEF709-5168-48F1-B8D3-AD44E4A4A22B}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureNetQ.Tests", "AzureNetQ.Tests\AzureNetQ.Tests.csproj", "{640DEC15-3A17-4E85-B38A-CFB379426DC2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureNetQ.Tests.SimpleService", "AzureNetQ.Tests.SimpleService\AzureNetQ.Tests.SimpleService.csproj", "{D5166633-83A2-48FA-B534-C2EC9D9DE9C3}"
 EndProject
@@ -45,21 +43,6 @@ Global
 		{B8DEF709-5168-48F1-B8D3-AD44E4A4A22B}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{B8DEF709-5168-48F1-B8D3-AD44E4A4A22B}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{B8DEF709-5168-48F1-B8D3-AD44E4A4A22B}.Release|x86.ActiveCfg = Release|Any CPU
-		{640DEC15-3A17-4E85-B38A-CFB379426DC2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{640DEC15-3A17-4E85-B38A-CFB379426DC2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{640DEC15-3A17-4E85-B38A-CFB379426DC2}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{640DEC15-3A17-4E85-B38A-CFB379426DC2}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{640DEC15-3A17-4E85-B38A-CFB379426DC2}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{640DEC15-3A17-4E85-B38A-CFB379426DC2}.DebugCloud|Any CPU.ActiveCfg = DebugCloud|Any CPU
-		{640DEC15-3A17-4E85-B38A-CFB379426DC2}.DebugCloud|Any CPU.Build.0 = DebugCloud|Any CPU
-		{640DEC15-3A17-4E85-B38A-CFB379426DC2}.DebugCloud|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{640DEC15-3A17-4E85-B38A-CFB379426DC2}.DebugCloud|Mixed Platforms.Build.0 = Debug|Any CPU
-		{640DEC15-3A17-4E85-B38A-CFB379426DC2}.DebugCloud|x86.ActiveCfg = DebugCloud|Any CPU
-		{640DEC15-3A17-4E85-B38A-CFB379426DC2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{640DEC15-3A17-4E85-B38A-CFB379426DC2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{640DEC15-3A17-4E85-B38A-CFB379426DC2}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{640DEC15-3A17-4E85-B38A-CFB379426DC2}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{640DEC15-3A17-4E85-B38A-CFB379426DC2}.Release|x86.ActiveCfg = Release|Any CPU
 		{D5166633-83A2-48FA-B534-C2EC9D9DE9C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D5166633-83A2-48FA-B534-C2EC9D9DE9C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D5166633-83A2-48FA-B534-C2EC9D9DE9C3}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
