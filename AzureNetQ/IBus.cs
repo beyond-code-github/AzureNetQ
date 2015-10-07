@@ -1,7 +1,7 @@
 namespace AzureNetQ
 {
-    using AzureNetQ.Consumer;
-    using AzureNetQ.FluentConfiguration;
+    using Consumer;
+    using FluentConfiguration;
     using System;
     using System.Threading.Tasks;
 
