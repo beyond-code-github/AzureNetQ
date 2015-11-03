@@ -14,7 +14,7 @@
     <dependencies>
         <dependency id="Microsoft.WindowsAzure.ConfigurationManager" version="3.1.0" />
         <dependency id="Newtonsoft.Json" version="7.0.1" />
-        <dependency id="WindowsAzure.ServiceBus" version="3.0.4" />
+        <dependency id="WindowsAzure.ServiceBus" version="3.0.7" />
     </dependencies>
   </metadata>
   <files>
