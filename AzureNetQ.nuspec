@@ -1,19 +1,20 @@
 <?xml version="1.0"?>
 <package>
-  <metadata> 
-    <version>0.2.0.1</version>
+  <metadata>
+    <id>Awesome.AzureNetQ</id>
+    <version>0.3.0.0</version>
     <authors>Roysvork</authors>
     <owners>Roysvork</owners>
-    <id>AzureNetQ</id>
-    <title>AzureNetQ</title>
+    <title>Awesome.AzureNetQ</title>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>AzureNetQ is a client API for Microsoft Azure Service Bus &amp; Service Bus for Windows on .NET</description>
     <copyright>Pete Smith 2014</copyright>
-    <projectUrl>http://roysvork.github.io/AzureNetQ</projectUrl>
+    <projectUrl>https://github.com/rykkart/AzureNetQ</projectUrl>
     <licenseUrl>https://github.com/roysvork/AzureNetQ/blob/master/licence.txt</licenseUrl>
     <dependencies>
-        <dependency id="ServiceBus.v1_1" version="1.0.3" />
-        <dependency id="Newtonsoft.Json" version="6.0.3" />
+        <dependency id="Microsoft.WindowsAzure.ConfigurationManager" version="3.1.0" />
+        <dependency id="Newtonsoft.Json" version="7.0.1" />
+        <dependency id="WindowsAzure.ServiceBus" version="3.0.7" />
     </dependencies>
   </metadata>
   <files>

@@ -1,15 +1,13 @@
 namespace AzureNetQ
 {
+    using AzureNetQ.Consumer;
+    using AzureNetQ.FluentConfiguration;
+    using AzureNetQ.Producer;
+    using Microsoft.ServiceBus.Messaging;
     using System;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-
-    using AzureNetQ.Consumer;
-    using AzureNetQ.FluentConfiguration;
-    using AzureNetQ.Producer;
-
-    using Microsoft.ServiceBus.Messaging;
 
     public class AzureBus : IBus
     {
@@ -73,6 +71,13 @@ namespace AzureNetQ
             this.PublishAsync(message).Wait();
         }
 
+        public void Publish<T>(T message, DateTime scheduledEnqueueTime) where T : class
+        {
+            Preconditions.CheckNotNull(message, "message");
+
+            this.PublishAsync(message, scheduledEnqueueTime).Wait();
+        }
+
         public void Publish<T>(T message, string topic) where T : class
         {
             Preconditions.CheckNotNull(message, "message");
@@ -81,12 +86,28 @@ namespace AzureNetQ
             this.PublishAsync(message, topic).Wait();
         }
 
+        public void Publish<T>(T message, string topic, DateTime scheduledEnqueueTime) where T : class
+        {
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
+
+            this.PublishAsync(message, topic, scheduledEnqueueTime).Wait();
+        }
+
         public void Publish<T>(T message, Action<IPublishConfiguration> configure) where T : class
         {
             Preconditions.CheckNotNull(message, "message");
             Preconditions.CheckNotNull(configure, "configure");
 
             this.PublishAsync(message, configure).Wait();
+        }
+
+        public void Publish<T>(T message, Action<IPublishConfiguration> configure, DateTime scheduledEnqueueTime) where T : class
+        {
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(configure, "configure");
+
+            this.PublishAsync(message, configure, scheduledEnqueueTime).Wait();
         }
 
         public void Publish<T>(T message, string topic, Action<IPublishConfiguration> configure) where T : class
@@ -98,12 +119,29 @@ namespace AzureNetQ
             this.PublishAsync(message, topic, configure).Wait();
         }
 
+        public void Publish<T>(T message, string topic, Action<IPublishConfiguration> configure, DateTime scheduledEnqueueTime) where T : class
+        {
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
+            Preconditions.CheckNotNull(configure, "configure");
+
+            this.PublishAsync(message, topic, configure, scheduledEnqueueTime).Wait();
+        }
+
         public void Publish(Type type, object message)
         {
             Preconditions.CheckNotNull(type, "type");
             Preconditions.CheckNotNull(message, "message");
 
             this.PublishAsync(type, message, x => { }).Wait();
+        }
+
+        public void Publish(Type type, object message, DateTime scheduledEnqueueTime)
+        {
+            Preconditions.CheckNotNull(type, "type");
+            Preconditions.CheckNotNull(message, "message");
+
+            this.PublishAsync(type, message, x => { }, scheduledEnqueueTime).Wait();
         }
 
         public void Publish(Type type, object message, string topic)
@@ -115,6 +153,15 @@ namespace AzureNetQ
             this.PublishAsync(type, message, topic, x => { }).Wait();
         }
 
+        public void Publish(Type type, object message, string topic, DateTime scheduledEnqueueTime)
+        {
+            Preconditions.CheckNotNull(type, "type");
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
+
+            this.PublishAsync(type, message, topic, x => { }, scheduledEnqueueTime).Wait();
+        }
+
         public void Publish(Type type, object message, Action<IPublishConfiguration> configure)
         {
             Preconditions.CheckNotNull(type, "type");
@@ -122,6 +169,15 @@ namespace AzureNetQ
             Preconditions.CheckNotNull(configure, "configure");
 
             this.PublishAsync(type, message, configure).Wait();
+        }
+
+        public void Publish(Type type, object message, Action<IPublishConfiguration> configure, DateTime scheduledEnqueueTime)
+        {
+            Preconditions.CheckNotNull(type, "type");
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(configure, "configure");
+
+            this.PublishAsync(type, message, configure, scheduledEnqueueTime).Wait();
         }
 
         public void Publish(Type type, object message, string topic, Action<IPublishConfiguration> configure)
@@ -134,11 +190,28 @@ namespace AzureNetQ
             this.PublishAsync(type, message, topic, configure).Wait();
         }
 
+        public void Publish(Type type, object message, string topic, Action<IPublishConfiguration> configure, DateTime scheduledEnqueueTime)
+        {
+            Preconditions.CheckNotNull(type, "type");
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
+            Preconditions.CheckNotNull(configure, "configure");
+
+            this.PublishAsync(type, message, topic, configure, scheduledEnqueueTime).Wait();
+        }
+
         public Task PublishAsync<T>(T message) where T : class
         {
             Preconditions.CheckNotNull(message, "message");
 
             return this.PublishAsync(message, x => { });
+        }
+
+        public Task PublishAsync<T>(T message, DateTime scheduledEnqueueTime) where T : class
+        {
+            Preconditions.CheckNotNull(message, "message");
+
+            return this.PublishAsync(message, x => { }, scheduledEnqueueTime);
         }
 
         public Task PublishAsync<T>(T message, string topic) where T : class
@@ -149,12 +222,28 @@ namespace AzureNetQ
             return this.PublishAsync(message, topic, x => { });
         }
 
+        public Task PublishAsync<T>(T message, string topic, DateTime scheduledEnqueueTime) where T : class
+        {
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
+
+            return this.PublishAsync(message, topic, x => { }, scheduledEnqueueTime);
+        }
+
         public Task PublishAsync<T>(T message, Action<IPublishConfiguration> configure) where T : class
         {
             Preconditions.CheckNotNull(message, "message");
             Preconditions.CheckNotNull(configure, "configure");
 
             return this.PublishAsync(typeof(T), message, configure);
+        }
+
+        public Task PublishAsync<T>(T message, Action<IPublishConfiguration> configure, DateTime scheduledEnqueueTime) where T : class
+        {
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(configure, "configure");
+
+            return this.PublishAsync(typeof(T), message, configure, scheduledEnqueueTime);
         }
 
         public Task PublishAsync<T>(T message, string topic, Action<IPublishConfiguration> configure) where T : class
@@ -166,12 +255,29 @@ namespace AzureNetQ
             return this.PublishAsync(typeof(T), message, topic, configure);
         }
 
+        public Task PublishAsync<T>(T message, string topic, Action<IPublishConfiguration> configure, DateTime scheduledEnqueueTime) where T : class
+        {
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
+            Preconditions.CheckNotNull(configure, "configure");
+
+            return this.PublishAsync(typeof(T), message, topic, configure, scheduledEnqueueTime);
+        }
+
         public Task PublishAsync(Type type, object message)
         {
             Preconditions.CheckNotNull(type, "type");
             Preconditions.CheckNotNull(message, "message");
 
             return this.PublishAsync(type, message, x => { });
+        }
+
+        public Task PublishAsync(Type type, object message, DateTime scheduledEnqueueTime)
+        {
+            Preconditions.CheckNotNull(type, "type");
+            Preconditions.CheckNotNull(message, "message");
+
+            return this.PublishAsync(type, message, x => { }, scheduledEnqueueTime);
         }
 
         public Task PublishAsync(Type type, object message, string topic)
@@ -183,6 +289,15 @@ namespace AzureNetQ
             return this.PublishAsync(type, message, topic, x => { });
         }
 
+        public Task PublishAsync(Type type, object message, string topic, DateTime scheduledEnqueueTime)
+        {
+            Preconditions.CheckNotNull(type, "type");
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(topic, "topic");
+
+            return this.PublishAsync(type, message, topic, x => { }, scheduledEnqueueTime);
+        }
+
         public Task PublishAsync(Type type, object message, Action<IPublishConfiguration> configure)
         {
             Preconditions.CheckNotNull(type, "type");
@@ -192,7 +307,24 @@ namespace AzureNetQ
             return this.PublishAsync(type, message, this.conventions.TopicNamingConvention(type), configure);
         }
 
+        public Task PublishAsync(Type type, object message, Action<IPublishConfiguration> configure, DateTime scheduledEnqueueTime)
+        {
+            Preconditions.CheckNotNull(type, "type");
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(configure, "configure");
+
+            return this.PublishAsync(type, message, this.conventions.TopicNamingConvention(type), configure, scheduledEnqueueTime);
+        }
+
         public Task PublishAsync(Type type, object message, string topicName, Action<IPublishConfiguration> configure)
+        {
+            Preconditions.CheckNotNull(message, "message");
+            Preconditions.CheckNotNull(configure, "configure");
+
+            return this.PublishAsync(type, message, topicName, configure, DateTime.Now);
+        }
+
+        public Task PublishAsync(Type type, object message, string topicName, Action<IPublishConfiguration> configure, DateTime scheduledEnqueueTime)
         {
             Preconditions.CheckNotNull(message, "message");
             Preconditions.CheckNotNull(configure, "configure");
@@ -213,6 +345,8 @@ namespace AzureNetQ
                 {
                     azureNetQMessage.MessageId = configuration.MessageId;
                 }
+
+                azureNetQMessage.ScheduledEnqueueTimeUtc = scheduledEnqueueTime.ToUniversalTime();
 
                 this.InfoWrite(queueName, azureNetQMessage.MessageId, string.Format("Publishing message: {0}", content));
                 return queue.SendAsync(azureNetQMessage);
@@ -285,11 +419,11 @@ namespace AzureNetQ
 
             subscriptionClient.OnMessageAsync(
                 message =>
-                    {
-                        this.InfoWrite(
-                            queueName,
-                            message.MessageId,
-                            string.Format("Received message on subscription {0}", configuration.Subscription));
+                {
+                    this.InfoWrite(
+                        queueName,
+                        message.MessageId,
+                        string.Format("Received message on subscription {0}", configuration.Subscription));
 
                     T messageBody;
                     try
@@ -324,7 +458,7 @@ namespace AzureNetQ
                             if (o.IsFaulted && o.Exception != null)
                             {
                                 var ex = o.Exception.Flatten().InnerExceptions.First();
-                                
+
                                 this.ErrorWrite(
                                     queueName,
                                     message.MessageId,
@@ -336,7 +470,7 @@ namespace AzureNetQ
                                 this.logger.ErrorWrite(ex);
                                 return message.AbandonAsync();
                             }
-                            
+
                             this.ErrorWrite(
                                 queueName,
                                 message.MessageId,

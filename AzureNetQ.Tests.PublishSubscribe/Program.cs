@@ -1,9 +1,8 @@
 ﻿namespace AzureNetQ.Tests.PublishSubscribe
 {
+    using AzureNetQ.NonGeneric;
     using System;
     using System.Threading.Tasks;
-
-    using AzureNetQ.NonGeneric;
 
     public class Program
     {
@@ -21,7 +20,7 @@
             this.bus.SubscribeAsync(
                 typeof(TestMessage),
                 obj => Task.Factory.StartNew(() => Console.WriteLine("Handler Received message: {0}", ((TestMessage)obj).Text)));
-                
+
             Console.WriteLine("Type a message or 'q' to quit.");
 
             string text = null;
@@ -32,7 +31,8 @@
                         new TestMessage
                         {
                             Text = text
-                        });
+                        },
+                        DateTime.Now.AddMinutes(1));
             }
 
             this.bus.Dispose();

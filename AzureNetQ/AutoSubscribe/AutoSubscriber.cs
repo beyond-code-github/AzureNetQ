@@ -1,12 +1,11 @@
 ﻿namespace AzureNetQ.AutoSubscribe
 {
+    using FluentConfiguration;
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
     using System.Threading.Tasks;
-
-    using AzureNetQ.FluentConfiguration;
 
     /// <summary>
     /// Lets you scan assemblies for implementations of <see cref="IConsume{T}"/> so that
@@ -174,13 +173,13 @@
 
                     var configuration =
                         new Action<ISubscriptionConfiguration>(c => configurationActions.ForEach(o => o(c)));
-                    
+
                     var dispatchDelegate =
                         Delegate.CreateDelegate(
                             subscriberTypeFromMessageTypeDelegate(subscriptionInfo.MessageType),
                             this.AutoSubscriberMessageDispatcher,
                             dispatchMethod);
-                            
+
                     var busSubscribeMethod = genericBusSubscribeMethod.MakeGenericMethod(subscriptionInfo.MessageType);
 
                     busSubscribeMethod.Invoke(this.Bus, new object[] { dispatchDelegate, configuration });

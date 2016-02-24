@@ -1,6 +1,7 @@
-﻿namespace AzureNetQ
+﻿
+namespace AzureNetQ
 {
-    using Microsoft.WindowsAzure;
+    using Microsoft.Azure;
 
     public static class AzureBusFactory
     {
@@ -12,8 +13,8 @@
         public static IBus CreateBus(string connectionString)
         {
             return CreateBus(connectionString, new AzureNetQSettings());
-        } 
-        
+        }
+
         public static IBus CreateBus(AzureNetQSettings settings)
         {
             var connectionString = CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString");
