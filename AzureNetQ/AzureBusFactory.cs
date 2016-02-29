@@ -1,7 +1,7 @@
-﻿namespace AzureNetQ
-{
-    using Microsoft.WindowsAzure;
+﻿using Microsoft.Azure;
 
+namespace AzureNetQ
+{
     public static class AzureBusFactory
     {
         public static IBus CreateBus()
